@@ -14,7 +14,7 @@ from django.http            import JsonResponse
 
 # Create your views here.
 class SignUpView(View):
-    @signin_decorator
+
     def post(self, request):
         try:
             data  = json.loads(request.body)
@@ -67,7 +67,7 @@ class SignUpView(View):
                 promotion_date   = data['promotion_date']
                 promoted_at      = data['promoted_at']
                 pass_num         = data['pass_num']
-                etc              = data['etc']
+                etc              = data['etc'],
             ).save()
 
             return JsonResponse({"message": "SIGNUP_SUCCESS"}, status=200)

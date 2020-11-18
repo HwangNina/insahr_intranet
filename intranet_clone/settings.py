@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 from pathlib import Path
 
 import my_settings
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,7 +41,29 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+    'storages', 
+    'employee',
+    'notice'
+=======
     'employee'
+>>>>>>> 9661418... [EDIT] 회원가입 뷰 작성
+=======
+    'employee'
+>>>>>>> 9661418... [EDIT] 회원가입 뷰 작성
+=======
+    'employee'
+>>>>>>> 9661418... [EDIT] 회원가입 뷰 작성
+=======
+    'employee'
+>>>>>>> 9661418... [EDIT] 회원가입 뷰 작성
+=======
+    'employee'
+>>>>>>> 9661418... [EDIT] 회원가입 뷰 작성
 ]
 
 MIDDLEWARE = [
@@ -78,7 +101,29 @@ WSGI_APPLICATION = 'intranet_clone.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
-DATABASES = my_settings.DATABASES
+DATABASES = my_settings.DATABASES'storages', 
+
+# S3 설정을 위한 변수
+# AWS_xxx 의 변수들은 aws-S3, boto3 모듈을 위한 변수들이다.
+
+# 엑세스 키와 시크릿 키는 다른 파일로 작성, 임포트하여 사용
+AWS_ACCESS_KEY_ID = MY_AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY = MY_AWS_SECRET_ACCESS_KEY
+
+AWS_REGION = 'ap-northeast-2'
+AWS_STORAGE_BUCKET_NAME = 'beap-test-shop'
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.%s.amazonaws.com' % (
+    AWS_STORAGE_BUCKET_NAME, AWS_REGION)
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
+}
+AWS_DEFAULT_ACL = 'public-read'
+AWS_LOCATION = 'static'
+STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static')
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -118,6 +163,11 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
 #REMOVE_APPEND_SLASH_WARNING
 APPEND_SLASH = False
 
@@ -145,6 +195,8 @@ CORS_ALLOW_HEADERS = (
     'x-csrftoken',
     'x-requested-with',
 )
+
+##DEBUG LOGGING
 
 LOGGING = {
     'disable_existing_loggers': False,

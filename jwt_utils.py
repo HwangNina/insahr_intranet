@@ -43,12 +43,8 @@ def signin_decorator(func):
 
             decode = jwt.decode(token, key, algorithm = algorithm)
             
-            if Employee.objects.filter(id = decode['employee']).exists():
-                request.employee = employee
-
-        except jwt.DecodeError:
-            return JsonResponse({"message": "INVALID_TOKEN"}, status=403)
-        except User.DoesNotExist:
+         Conflicting files
+employee/views.pyxcept User.DoesNotExist:
             return JsonResponse({'message': 'USER_DOES_NOT_EXIST'}, status=403)
 
         return func(self, request, *args, **kwargs)

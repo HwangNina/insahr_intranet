@@ -14,7 +14,7 @@ from django.http            import JsonResponse
 
 # Create your views here.
 class SignUpView(View):
-
+    #@signin_decorator
     def post(self, request):
         try:
             data  = json.loads(request.body)
@@ -57,16 +57,16 @@ class SignUpView(View):
             ).save()
 
             EmployeeDetail(
-                joined_at        = data['joined_at']
-                probation_period = data['probation_period']
-                worked_since     = data['worked_since']
-                total_experience = data['total_experience']
-                annual_vacation  = data['annual_vacation']
-                annual_vacation_permission = data['annual_vacation_permission']
-                status           = data['status']
-                promotion_date   = data['promotion_date']
-                promoted_at      = data['promoted_at']
-                pass_num         = data['pass_num']
+                joined_at        = data['joined_at'],
+                probation_period = data['probation_period'],
+                worked_since     = data['worked_since'],
+                total_experience = data['total_experience'],
+                annual_vacation  = data['annual_vacation'],
+                annual_vacation_permission = data['annual_vacation_permission'],
+                status           = data['status'],
+                promotion_date   = data['promotion_date'],
+                promoted_at      = data['promoted_at'],
+                pass_num         = data['pass_num'],
                 etc              = data['etc'],
             ).save()
 
@@ -160,17 +160,17 @@ class EmployeeInfoView(View):
                 'detailed_address'  :target_employee.detailed_address
                 },
             'admin_auth':{
-                'joined_at'        : target_employee_detail.joined_at
-                'probation_period' : target_employee_detail.probation_period
-                'worked_since'     : target_employee_detail.worked_since
-                'total_experience' : target_employee_detail.total_experience
-                'annual_vacation'  : target_employee_detail.annual_vacation
-                'annual_vacation_permission' : target_employee_detail.annual_vacation_permission
-                'status'           : target_employee_detail.status
-                'promotion_date'   : target_employee_detail.promotion_date
-                'promoted_at'      : target_employee_detail.promoted_at
-                'pass_num'         : target_employee_detail.pass_num
-                'etc'              : target_employee_detail.etc
+                'joined_at'        : target_employee_detail.joined_at,
+                'probation_period' : target_employee_detail.probation_period,
+                'worked_since'     : target_employee_detail.worked_since,
+                'total_experience' : target_employee_detail.total_experience,
+                'annual_vacation'  : target_employee_detail.annual_vacation,
+                'annual_vacation_permission' : target_employee_detail.annual_vacation_permission,
+                'status'           : target_employee_detail.status,
+                'promotion_date'   : target_employee_detail.promotion_date,
+                'promoted_at'      : target_employee_detail.promoted_at,
+                'pass_num'         : target_employee_detail.pass_num,
+                'etc'              : target_employee_detail.etc,
                 }
             }
         )

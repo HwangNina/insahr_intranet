@@ -143,22 +143,6 @@ class EmployeeInfoView(View):
                                ).decode('utf-8')
 
         return JsonResponse(
-            {
-            'account': target_employee.account,
-            'name_kor': target_employee.name_kor,
-            'name_eng': target_employee.name_eng,
-            'nickname': target_employee.nickname,
-            'rrn':str(rrn_decrypt),
-            'mobile':target_employee.mobile,
-            'emergency_num':target_employee.emergency_num,
-            'company_email':target_employee.company_email,
-            'personal_email':target_employee.personal_email,
-            'bank_name':target_employee.bank_name,
-            'bank_account':str(bank_account_decrypt),
-            'passport_num':str(passport_num_decrypt),
-            'address':target_employee.address,
-            'detailed_address':target_employee.detailed_address
-
             {'all_auth':{
                 'account'           : target_employee.account,
                 'name_kor'          : target_employee.name_kor,

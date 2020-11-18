@@ -42,8 +42,7 @@ def signin_decorator(func):
 
             decode = jwt.decode(token, key, algorithm = algorithm)
             
-         Conflicting files
-employee/views.pyxcept User.DoesNotExist:
+        except User.DoesNotExist:
             return JsonResponse({'message': 'USER_DOES_NOT_EXIST'}, status=403)
 
         return func(self, request, *args, **kwargs)

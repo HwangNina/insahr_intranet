@@ -176,17 +176,17 @@ class EmployeeInfoView(View):
                 'detailed_address'  :target_employee.detailed_address
                 },
             'admin_auth':{
-                'joined_at'        : target_employee_detail.joined_at
-                'probation_period' : target_employee_detail.probation_period
-                'worked_since'     : target_employee_detail.worked_since
-                'total_experience' : target_employee_detail.total_experience
-                'annual_vacation'  : target_employee_detail.annual_vacation
-                'annual_vacation_permission' : target_employee_detail.annual_vacation_permission
-                'status'           : target_employee_detail.status
-                'promotion_date'   : target_employee_detail.promotion_date
-                'promoted_at'      : target_employee_detail.promoted_at
-                'pass_num'         : target_employee_detail.pass_num
-                'etc'              : target_employee_detail.etc
+                'joined_at'        : target_employee_detail.joined_at,
+                'probation_period' : target_employee_detail.probation_period,
+                'worked_since'     : target_employee_detail.worked_since,
+                'total_experience' : target_employee_detail.total_experience,
+                'annual_vacation'  : target_employee_detail.annual_vacation,
+                'annual_vacation_permission' : target_employee_detail.annual_vacation_permission,
+                'status'           : target_employee_detail.status,
+                'promotion_date'   : target_employee_detail.promotion_date,
+                'promoted_at'      : target_employee_detail.promoted_at,
+                'pass_num'         : target_employee_detail.pass_num,
+                'etc'              : target_employee_detail.etc,
                 }
             }
         )

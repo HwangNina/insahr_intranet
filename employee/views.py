@@ -57,17 +57,17 @@ class SignUpView(View):
             ).save()
 
             EmployeeDetail(
-                joined_at        = data['joined_at']
-                probation_period = data['probation_period']
-                worked_since     = data['worked_since']
-                total_experience = data['total_experience']
-                annual_vacation  = data['annual_vacation']
-                annual_vacation_permission = data['annual_vacation_permission']
-                status           = data['status']
-                promotion_date   = data['promotion_date']
-                promoted_at      = data['promoted_at']
-                pass_num         = data['pass_num']
-                etc              = data['etc']
+                joined_at        = data['joined_at'],
+                probation_period = data['probation_period'],
+                worked_since     = data['worked_since'],
+                total_experience = data['total_experience'],
+                annual_vacation  = data['annual_vacation'],
+                annual_vacation_permission = data['annual_vacation_permission'],
+                status           = data['status'],
+                promotion_date   = data['promotion_date'],
+                promoted_at      = data['promoted_at'],
+                pass_num         = data['pass_num'],
+                etc              = data['etc'],
             ).save()
 
             return JsonResponse({"message": "SIGNUP_SUCCESS"}, status=200)

@@ -5,7 +5,7 @@ class Auth(models.Model):
     name = models.CharField(max_length=50)
 
     def __str__(self):
-        return name
+        return self.name
 
     class Meta():
         db_table = 'auths'
@@ -30,7 +30,7 @@ class Employee(models.Model):
     detailed_address = models.CharField(max_length=200, null=True)
 
     def __str__(self):
-        return name_kor
+        return self.name_kor
     
     class Meta():
         db_table = 'employees'

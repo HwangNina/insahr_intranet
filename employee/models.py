@@ -36,7 +36,7 @@ class Employee(models.Model):
         db_table = 'employees'
 
 class EmployeeDetail(models.Model):
-    employee         = models.OneToOneField(employee, on_delete=models.CASCADE)
+    employee         = models.OneToOneField(Employee, on_delete=models.CASCADE)
     joined_at        = models.DateField(auto_now=False, auto_now_add=False, null=True)
     probation_period = models.CharField(max_length=50, null=True)
     worked_since     = models.DateField(auto_now=False, auto_now_add=False, null=True)

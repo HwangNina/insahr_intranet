@@ -35,7 +35,6 @@ def signin_decorator(func):
             #         request.employee = employee
 
             key = my_settings.SECRET.get('secret_key')
-
             algorithm = my_settings.SECRET.get('JWT_ALGORITHM')
 
             if token == None:

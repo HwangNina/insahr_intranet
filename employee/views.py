@@ -14,7 +14,7 @@ from django.http            import JsonResponse
 
 # Create your views here.
 class SignUpView(View):
-    @signin_decorator
+    #@signin_decorator
     def post(self, request):
         try:
             data  = json.loads(request.body)
@@ -143,6 +143,22 @@ class EmployeeInfoView(View):
                                ).decode('utf-8')
 
         return JsonResponse(
+            {
+            'account': target_employee.account,
+            'name_kor': target_employee.name_kor,
+            'name_eng': target_employee.name_eng,
+            'nickname': target_employee.nickname,
+            'rrn':str(rrn_decrypt),
+            'mobile':target_employee.mobile,
+            'emergency_num':target_employee.emergency_num,
+            'company_email':target_employee.company_email,
+            'personal_email':target_employee.personal_email,
+            'bank_name':target_employee.bank_name,
+            'bank_account':str(bank_account_decrypt),
+            'passport_num':str(passport_num_decrypt),
+            'address':target_employee.address,
+            'detailed_address':target_employee.detailed_address
+
             {'all_auth':{
                 'account'           : target_employee.account,
                 'name_kor'          : target_employee.name_kor,
@@ -180,6 +196,44 @@ class EmployeeInfoView(View):
         try:
             data  = json.loads(request.body)
             regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
+
+            if not (re.search(regex, data['company_email'])):
+                return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
+
+            if not (re.search(regex, data['personal_email'])):
+                return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
+
+            if data['password'] != 
+
+            password       = data['password'].encode('utf-8')
+            password_crypt = bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8')
+
+            rrn_encrypt = encrypt_utils.encrypt(data['rrn'], my_settings.SECRET.get('raw'))
+           
+            bank_account_encrypt = encrypt_utils.encrypt(data['bank_account'], my_settings.SECRET.get('raw'))
+
+            passport_num_encrypt = encrypt_utils.encrypt(data['passport_num'], my_settings.SECRET.get('raw'))
+
+            Employee(
+                account          = data['account'],
+                password         = password_crypt,
+                name_kor         = data['name_kor'],
+                name_eng         = data['name_eng'],
+                nickname         = data['nickname'],
+                rrn              = rrn_encrypt.decode('utf-8'),
+                mobile           = data['mobile'],
+                emergency_num    = data['emergency_num'],
+                company_email    = data['company_email'],
+                personal_email   = data['personal_email'],
+                bank_name        = data['bank_name'],
+                bank_account     = bank_account_encrypt.decode('utf-8'),
+                passport_num     = passport_num_encrypt.decode('utf-8'),
+                address          = data['address'],
+                detailed_address = data['detailed_address']
+            ).save()
+
+            return JsonResponse({"message": "SIGNUP_SUCCESS"}, status=200)
+
             if data.haskey('company_email') and not (re.search(regex, data['company_email'])):
                 return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
 

@@ -36,13 +36,13 @@ class Employee(models.Model):
         db_table = 'employees'
 
 class EmployeeDetail(models.Model):
-    employee         = models.OneToOneField(employee, on_delete=models.CASCADE)
+    employee         = models.OneToOneField(Employee, on_delete=models.CASCADE)
     joined_at        = models.DateField(auto_now=False, auto_now_add=False, null=True)
     probation_period = models.CharField(max_length=50, null=True)
     worked_since     = models.DateField(auto_now=False, auto_now_add=False, null=True)
     total_experience = models.CharField(max_length=50, null=True)
     annual_vacation  = models.IntegerField(null=True)
-    annual_vacation_permission = models.ForeignKey('self', null=True, on_delete=models.SET_NULL)
+    annual_vacation_permission = models.ForeignKey('Employee', null=True, on_delete=models.SET_NULL)
     status           = models.CharField(max_length=50, null=True)
     promotion_date   = models.DateField(auto_now=False, auto_now_add=False, null=True)
     promoted_at      = models.DateField(auto_now=False, auto_now_add=False, null=True)

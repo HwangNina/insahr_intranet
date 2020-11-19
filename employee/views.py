@@ -19,6 +19,7 @@ class SignUpView(View):
     def post(self, request):
         try:
             data  = json.loads(request.body)
+
             regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
             if not (re.search(regex, data['company_email'])):
                 return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
@@ -32,14 +33,25 @@ class SignUpView(View):
             password       = data['password'].encode('utf-8')
             password_crypt = bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8')
 
-            rrn_encrypt = encrypt_utils.encrypt(data['rrn'], my_settings.SECRET.get('raw'))
-           
-            bank_account_encrypt = encrypt_utils.encrypt(data['bank_account'], my_settings.SECRET.get('raw'))
 
-            passport_num_encrypt = encrypt_utils.encrypt(data['passport_num'], my_settings.SECRET.get('raw'))
+            if data['rrn']:
+                rrn_encrypt = encrypt_utils.encrypt(data['rrn'], my_settings.SECRET.get('random'))
+            else:
+                rrn_encrypt = NULL
+
+            if data['bank_account']:
+                bank_account_encrypt = encrypt_utils.encrypt(data['bank_account'], my_settings.SECRET.get('random'))
+            else:
+                bank_account_encrypt = NULL
+
+            if data['passport_num']:
+                passport_num_encrypt = encrypt_utils.encrypt(data['passport_num'], my_settings.SECRET.get('random'))
+            else:
+                passport_num_encrypt = NULL
+
 
             Employee(
-                auth             = Auth.objects.get(id = data['auth']),
+                auth             = Auth.objects.get(id = data['auth']).id,
                 account          = data['account'],
                 password         = password_crypt,
                 name_kor         = data['name_kor'],
@@ -56,7 +68,7 @@ class SignUpView(View):
                 address          = data['address'],
                 detailed_address = data['detailed_address'],
             ).save()
-
+            
             EmployeeDetail(
                 joined_at        = data['joined_at'],
                 probation_period = data['probation_period'],
@@ -70,7 +82,7 @@ class SignUpView(View):
                 pass_num         = data['pass_num'],
                 etc              = data['etc'],
             ).save()
-
+            
             return JsonResponse({"message": "SIGNUP_SUCCESS"}, status=200)
 
         except KeyError:

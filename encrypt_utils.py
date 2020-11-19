@@ -21,10 +21,10 @@ def get_private_key(random):
  
 def encrypt(info, random):
     private_key = get_private_key(random)
-    raw = pad(raw).encode('utf-8')
+    random = pad(random).encode('utf-8')
     iv = Random.new().read(AES.block_size)
     cipher = AES.new(private_key, AES.MODE_CBC, iv)
-    return base64.b64encode(iv + cipher.encrypt(raw))
+    return base64.b64encode(iv + cipher.encrypt(random))
  
  
 def decrypt(enc, random):

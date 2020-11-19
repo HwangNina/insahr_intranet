@@ -58,7 +58,7 @@ class NoticeDetailView(View):
 
     def post(self, request):
         try:
-            employee_id = request.employee.id
+            # employee_id = request.employee.id
             data = request.POST
         
             if request.FILES.get('attachment'):
@@ -136,7 +136,7 @@ class NoticeDetailView(View):
 
     def patch(self, request, notice_id):
         try:
-            employee_id   = request.employee.id
+            # employee_id   = request.employee.id
             target_notice = Notice.objects.get(id = notice_id)
             data          = request.POST
 
@@ -195,7 +195,7 @@ class NoticeDetailView(View):
                 status=400)
     
     def delete(self, request, notice_id):
-        employee_id   = request.employee.id
+        # employee_id   = request.employee.id
         target_notice = Notice.objects.get(id = notice_id)
        
         if target_notice.author != employee_id:

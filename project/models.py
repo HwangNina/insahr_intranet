@@ -3,6 +3,7 @@ from django.db import models
 
 class Project(models.Model):
     title = models.CharField(max_length = 45)
+    description = models.CharField(max_length = 100)
     is_private = models.BooleanField(default = False)
 
     class Meta :

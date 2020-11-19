@@ -7,7 +7,6 @@ from employee.models    import Employee
 
 class Notice(models.Model):
     title = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=200, unique=True)
     content = models.TextField()
     author = models.ForeignKey(Employee, on_delete=models.DO_NOTHING)
     created_at = models.DateField(default=timezone.now)

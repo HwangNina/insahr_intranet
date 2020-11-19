@@ -9,7 +9,7 @@ import jwt_utils
 import requests
 
 from django.views           import View
-from employee.models        import Employee, EmployeeDetail
+from employee.models        import Auth, Employee, EmployeeDetail
 from django.http            import JsonResponse
 
 
@@ -34,62 +34,66 @@ class SignUpView(View):
             password_crypt = bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8')
 
 
-            if data['rrn']:
+            if 'rrn' in data:
                 rrn_encrypt = encrypt_utils.encrypt(data['rrn'], my_settings.SECRET.get('random'))
+                rrn_input = rrn_encrypt.decode('utf-8')
             else:
-                rrn_encrypt = NULL
+                rrn_input = None
 
-            if data['bank_account']:
+            if 'bank_account' in data:
                 bank_account_encrypt = encrypt_utils.encrypt(data['bank_account'], my_settings.SECRET.get('random'))
+                bank_account_input = bank_account_encrypt.decode('utf-8')
             else:
-                bank_account_encrypt = NULL
+                bank_account_input = None
 
-            if data['passport_num']:
+            if 'passport_num' in data:
                 passport_num_encrypt = encrypt_utils.encrypt(data['passport_num'], my_settings.SECRET.get('random'))
+                passport_num_input = passport_num_encrypt.decode('utf-8')
             else:
-                passport_num_encrypt = NULL
+                passport_num_input = None
 
 
             Employee(
-                auth             = Auth.objects.get(id = data['auth']).id,
+                auth             = Auth.objects.get(id = data['auth']),
                 account          = data['account'],
                 password         = password_crypt,
                 name_kor         = data['name_kor'],
                 name_eng         = data['name_eng'],
                 nickname         = data['nickname'],
-                rrn              = rrn_encrypt.decode('utf-8'),
+                rrn              = rrn_input,
                 mobile           = data['mobile'],
                 emergency_num    = data['emergency_num'],
                 company_email    = data['company_email'],
                 personal_email   = data['personal_email'],
                 bank_name        = data['bank_name'],
-                bank_account     = bank_account_encrypt.decode('utf-8'),
-                passport_num     = passport_num_encrypt.decode('utf-8'),
+                bank_account     = bank_account_input,
+                passport_num     = passport_num_input,
                 address          = data['address'],
                 detailed_address = data['detailed_address'],
             ).save()
             
-            EmployeeDetail(
-                joined_at        = data['joined_at'],
-                probation_period = data['probation_period'],
-                worked_since     = data['worked_since'],
-                total_experience = data['total_experience'],
-                annual_vacation  = data['annual_vacation'],
-                annual_vacation_permission = data['annual_vacation_permission'],
-                status           = data['status'],
-                promotion_date   = data['promotion_date'],
-                promoted_at      = data['promoted_at'],
-                pass_num         = data['pass_num'],
-                etc              = data['etc'],
-            ).save()
+            # EmployeeDetail(
+            #     joined_at        = data['joined_at'],
+            #     probation_period = data['probation_period'],
+            #     worked_since     = data['worked_since'],
+            #     total_experience = data['total_experience'],
+            #     annual_vacation  = data['annual_vacation'],
+            #     annual_vacation_permission = data['annual_vacation_permission'],
+            #     status           = data['status'],
+            #     promotion_date   = data['promotion_date'],
+            #     promoted_at      = data['promoted_at'],
+            #     pass_num         = data['pass_num'],
+            #     etc              = data['etc'],
+            # ).save()
             
             return JsonResponse({"message": "SIGNUP_SUCCESS"}, status=200)
 
-        except KeyError:
-            return JsonResponse({"message": "KEY_ERROR"}, status=400)
+        except Exception as e:
+            print(repr(e))
+            return JsonResponse({'message':'KEY_ERROR'}, status=400)
 
-        except ValueError:
-            return JsonResponse({"message": "VALUE_ERROR"}, status=400)
+        # except ValueError:
+        #     return JsonResponse({"message": "VALUE_ERROR"}, status=400)
 
 
 class SignInView(View):
@@ -198,16 +202,16 @@ class EmployeeInfoView(View):
                     'name_kor'          : target_employee.name_kor,
                     'name_eng'          : target_employee.name_eng,
                     'nickname'          : target_employee.nickname,
-                    'rrn'               :str(rrn_decrypt),
-                    'mobile'            :target_employee.mobile,
-                    'emergency_num'     :target_employee.emergency_num,
-                    'company_email'     :target_employee.company_email,
-                    'personal_email'    :target_employee.personal_email,
-                    'bank_name'         :target_employee.bank_name,
-                    'bank_account'      :str(bank_account_decrypt),
-                    'passport_num'      :str(passport_num_decrypt),
-                    'address'           :target_employee.address,
-                    'detailed_address'  :target_employee.detailed_address 
+                    'rrn'               : str(rrn_decrypt),
+                    'mobile'            : target_employee.mobile,
+                    'emergency_num'     : target_employee.emergency_num,
+                    'company_email'     : target_employee.company_email,
+                    'personal_email'    : target_employee.personal_email,
+                    'bank_name'         : target_employee.bank_name,
+                    'bank_account'      : str(bank_account_decrypt),
+                    'passport_num'      : str(passport_num_decrypt),
+                    'address'           : target_employee.address,
+                    'detailed_address'  : target_employee.detailed_address 
                 }
                 }
             )
@@ -229,17 +233,21 @@ class EmployeeInfoView(View):
                     
                     Employee(password = new_password_crypt)
 
-                employee_field_lists = [field.name for field in Employee._meta.get_fields()]
-                employee_field_lists.remove('password')
+                employee_field_list = [field.name for field in Employee._meta.get_fields()]
+                employee_field_list.remove('password')
 
-                for field in employee_field_lists:
-                    if data.has_key(field):
+                employee_detail_field_list = [field.name for field in EmployeeDetail._meta.get_fields()]
+
+                for field in employee_field_list:
+                    if field in data:
                         if field == (rrn or bank_account or passport_num):
-                            Employee(field = encrypt_utils.encrypt(data[field], my_settings.SECRET.get('random')))
+                            Employee.objects.update(**{field : encrypt_utils.encrypt(data[field], my_settings.SECRET.get('random'))})
                         else:
-                            Employee(field = data[field])
+                            Employee.objects.update(**{field : data[field]})
 
-                Employee.save()
+                for field in employee_detail_field_list:
+                    if field in data:
+                        EmployeeDetail.objects.update(**{field : data[field]})
 
                 return JsonResponse({"message": "MODIFICATION_SUCCESS"}, status=200)
 

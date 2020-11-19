@@ -16,5 +16,6 @@ Including another URLconf
 from django.urls import path, include
 
 urlpatterns = [
-    path("employee", include("employee.urls"))
+    path("employee", include("employee.urls")),
+    path("notice", include("notice.urls"))
 ]

@@ -11,16 +11,16 @@ from employee.models import Employee
 
 class NoticeListView(View):
 
-    def get(self, request):
+    def get(self, request, **search):
         try:
-            data = json.loads(request.body)
-            limit = 5
-            if data['offset']:
-                offset = int(data['offset'][0])
-            else:
-                offset = 0
 
-            notice_list = Notice.objects.all().values()
+            limit = 5
+            offset = int(request.GET.get('offset', 0))
+
+            if search:
+                notice_list = Notice.objects.filter(title__icontains = search['search']).values()
+            else:
+                notice_list = Notice.objects.all().values()
 
             if offset > len(notice_list):
                 return JsonResponse(
@@ -33,9 +33,9 @@ class NoticeListView(View):
 
             returning_list = [
                 {
-                'no': notice.id,
-                'title': notice.title,
-                'date': notice.created_at
+                'no': notice['id'],
+                'title': notice['title'],
+                'date': notice['created_at']
                 } for notice in notice_page_list
             ]
 
@@ -107,16 +107,8 @@ class NoticeDetailView(View):
                 }, 
                 status=201)
 
-        except Exception as e:
-            print(repr(e))
-            return JsonResponse({'message':'KEY_ERROR'}, status=400)
-
-        # except KeyError:
-        #     return JsonResponse(
-        #         {
-        #         'message':'KEY_ERROR'
-        #         }, 
-        #         status=400)
+        except KeyError as e :
+            return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
     
     def get(self, request, notice_id):
         target_notice       = dict(Notice.objects.filter(id = notice_id).values()[0])
@@ -203,8 +195,6 @@ class NoticeDetailView(View):
                     file   = file_url
                 )
 
-            if 'title' in data:
-                target_notice.title = data['title']
             if 'content' in data:
                 target_notice.content = data['content']
 
@@ -221,12 +211,8 @@ class NoticeDetailView(View):
                 }, 
                 status=201)
 
-        except KeyError:
-            return JsonResponse(
-                {
-                'message':'KEY_ERROR'
-                }, 
-                status=400)
+        except KeyError as e :
+            return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
     
     def delete(self, request, notice_id):
         # employee_id   = request.employee.id

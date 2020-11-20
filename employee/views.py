@@ -20,11 +20,12 @@ class SignUpView(View):
         try:
             data  = json.loads(request.body)
 
-            regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
-            if not (re.search(regex, data['company_email'])):
+            email_regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
+
+            if not (re.search(email_regex, data['company_email'])):
                 return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
 
-            if not (re.search(regex, data['personal_email'])):
+            if not (re.search(email_regex, data['personal_email'])):
                 return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
 
             if Employee.objects.filter(account=data['account']).exists():
@@ -133,8 +134,8 @@ class SignInView(View):
             else:
                 return JsonResponse({"message": "INVALID_PASSWORD"}, status=401)
 
-        except KeyError:
-            return JsonResponse({"message": "KEY_ERROR"}, status=400)
+        except KeyError as e :
+            return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
 
         except ValueError:
             return JsonResponse({"message": "VALUE_ERROR"}, status=400)
@@ -254,8 +255,8 @@ class EmployeeInfoView(View):
             else:
                 return JsonResponse({'message': "WRONG_PASSWORD"}, status=400)
 
-        except KeyError:
-            return JsonResponse({"message": "KEY_ERROR"}, status=400)
+        except KeyError as e :
+            return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
 
         except ValueError:
             return JsonResponse({"message": "VALUE_ERROR"}, status=400)

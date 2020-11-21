@@ -1,20 +1,16 @@
 from django.db import models
-
+from django.utils import timezone
 
 class Project(models.Model):
     title = models.CharField(max_length = 45)
-    description = models.CharField(max_length = 100)
+    description = models.CharField(max_length = 100,null=True)
     is_private = models.BooleanField(default = False)
+    start_date = models.DateTimeField(auto_now=False, auto_now_add=False, default = timezone.now )
+    end_date = models.DateTimeField(auto_now=False, auto_now_add=False, default = timezone.now)
+    employee = models.ForeignKey('employee.Employee', on_delete = models.CASCADE, default ='')
 
     class Meta :
         db_table = 'projects'
-
-class PrivateProject(models.Model):
-    employee = models.ForeignKey('employee.Employee', on_delete = models.CASCADE, null = True)
-    project = models.ForeignKey('Project', on_delete = models.CASCADE, null = True)
-
-    class Meta :
-        db_table = 'private_projects'
 
 class ProjectDetail(models.Model):
     writer = models.ForeignKey('employee.Employee', on_delete = models.CASCADE)

@@ -18,7 +18,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.CharField(max_length=45)),
+                ('description', models.CharField(max_length=100)),
                 ('is_private', models.BooleanField(default=False)),
+                ('end_date' ,models.DateTimeField(default=django.utils.timezone.now)),
+                ('start_date', models.DateTimeField(default=django.utils.timezone.now)),
             ],
             options={
                 'db_table': 'projects',
@@ -72,16 +75,5 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'project_attachments',
             },
-        ),
-        migrations.CreateModel(
-            name='PrivateProject',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('employee', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='employee.employee')),
-                ('project', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='project.project')),
-            ],
-            options={
-                'db_table': 'private_projects',
-            },
-        ),
+        )
     ]

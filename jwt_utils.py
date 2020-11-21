@@ -38,11 +38,6 @@ def signin_decorator(func):
                     request.employee = employee
                     employee_auth = key_list.index(k)+1
 
-            # key = my_settings.SECRET.get('secret_key')
-            # algorithm = my_settings.SECRET.get('JWT_ALGORITHM')
-
-            # decode = jwt.decode(token, key, algorithm = algorithm)
-            
         except User.DoesNotExist:
             return JsonResponse({'message': 'USER_DOES_NOT_EXIST'}, status=403)
 

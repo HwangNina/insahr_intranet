@@ -21,9 +21,6 @@ class SignUpView(View):
         try:
             data  = json.loads(request.body)
 
-            def encryption(user_input):
-                return encrypt_utils.encrypt(data[user_input], my_settings.SECRET.get('raw'))
-
             email_regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
 
             if not (re.search(email_regex, data['company_email'])):
@@ -37,6 +34,9 @@ class SignUpView(View):
 
             password       = data['password'].encode('utf-8')
             password_crypt = bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8')
+
+            def encryption(user_input):
+                return encrypt_utils.encrypt(data[user_input], my_settings.SECRET.get('random'))
 
             encryption_needed = ['rrn', 'bank_account', 'passport_num']
             encryption_result = []
@@ -135,21 +135,21 @@ class EmployeeInfoView(View):
 
         if target_employee.rrn:
             rrn_decrypt          = encrypt_utils.decrypt(
-                                   target_employee.rrn, my_settings.SECRET.get('raw')
+                                   target_employee.rrn, my_settings.SECRET.get('random')
                                    ).decode('utf-8')
         else:
             rrn_decrypt = ""
 
         if target_employee.bank_account:
             bank_account_decrypt = encrypt_utils.decrypt(
-                                    target_employee.bank_account, my_settings.SECRET.get('raw')
+                                    target_employee.bank_account, my_settings.SECRET.get('random')
                                     ).decode('utf-8')
         else:
             bank_account_decrypt = ""
 
         if target_employee.passport_num:
             passport_num_decrypt = encrypt_utils.decrypt(
-                                   target_employee.passport_num, my_settings.SECRET.get('raw')
+                                   target_employee.passport_num, my_settings.SECRET.get('random')
                                    ).decode('utf-8')
         else:
             passport_num_decrypt = ""

@@ -18,7 +18,7 @@ class Schedule(models.Model):
     label       = models.ForeignKey(Label, on_delete=models.DO_NOTHING)
     title       = models.CharField(max_length=500)
     location    = models.CharField(max_length=200)
-    date        = models.DateField(auto_now=False, auto_now_add=False, default = timezone.now())
+    start_date        = models.DateField(auto_now=False, auto_now_add=False, default = timezone.now())
     begin_at    = models.TimeField(auto_now=False, auto_now_add=False)
     finish_at   = models.TimeField(auto_now=False, auto_now_add=False)
     description = models.TextField()

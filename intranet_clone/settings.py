@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'storages', 
     'employee',
     'notice',
-    'project'
+    'project',
+    'schedule'
 ]
 
 MIDDLEWARE = [

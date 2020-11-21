@@ -7,19 +7,20 @@ from django.views import View
 from django.http import JsonResponse
 
 from notice.models import Notice, NoticeAttachment
+from employee.models import Employee
 
 class NoticeListView(View):
 
-    def get(self, request):
+    def get(self, request, **search):
         try:
-            data = json.loads(request.body)
-            limit = 5
-            if data['offset']:
-                offset = int(data['offset'][0])
-            else:
-                offset = 0
 
-            notice_list = Notice.objects.all().values()
+            limit = 5
+            offset = int(request.GET.get('offset', 0))
+
+            if search:
+                notice_list = Notice.objects.filter(title__icontains = search['search']).values()
+            else:
+                notice_list = Notice.objects.all().values()
 
             if offset > len(notice_list):
                 return JsonResponse(
@@ -32,9 +33,9 @@ class NoticeListView(View):
 
             returning_list = [
                 {
-                'no': notice.id,
-                'title': notice.title,
-                'date': notice.created_at
+                'no': notice['id'],
+                'title': notice['title'],
+                'date': notice['created_at']
                 } for notice in notice_page_list
             ]
 
@@ -58,12 +59,13 @@ class NoticeDetailView(View):
 
     def post(self, request):
         try:
+            employee_id = 1
             # employee_id = request.employee.id
-            data = request.POST
+            data  = json.loads(request.body)
         
-            if request.FILES.get('attachment'):
-                attachment_list = []
-                attachments     = request.FILES['attachment']
+            attachment_list = []
+            if request.FILES.get('attachment', None):
+                attachments = request.FILES['attachment']
 
                 for file in attachments:
                     filename = str(uuid.uuid1()).replace('-','')
@@ -80,11 +82,12 @@ class NoticeDetailView(View):
                     attachment_list.append(file_url)
             else:
                 file_url = None
+    
 
             new_notice = Notice.objects.create(
                         title     = data['title'],
                         content   = data['content'],
-                        author    = employee_id,
+                        author    = Employee.objects.get(id = employee_id),
                         )
 
             for file in attachment_list:
@@ -95,54 +98,71 @@ class NoticeDetailView(View):
             
             return JsonResponse(
                 {
-                'notice': new_notice.values(),
+                'notice': {
+                    'title':new_notice.title,
+                    'content':new_notice.content,
+                    'created_at':new_notice.created_at
+                },
                 'attachments': attachment_list
                 }, 
                 status=201)
 
-        except KeyError:
-            return JsonResponse(
-                {
-                'message':'KEY_ERROR'
-                }, 
-                status=400)
+        except KeyError as e :
+            return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
     
     def get(self, request, notice_id):
-        target_notice       = Notice.objects.get(id = notice_id).select_related('notice_attachment_file')
-        target_notice_idx   = Notice.objects.all().values().index(target_notice)
+        target_notice       = dict(Notice.objects.filter(id = notice_id).values()[0])
+        notice_list = [notice for notice in Notice.objects.all().values()]
+        print('TARGET',target_notice)
+        print(notice_list)
+        target_notice_idx   = notice_list.index(target_notice)
 
-        previous_notice     = Notice.objects.all().values()[target_notice_idx-1]
-        next_notice         = Notice.objects.all().values()[target_notice_idx+1]
+        if target_notice_idx > 1:
+            previous_notice     = notice_list[target_notice_idx-1]
+            returning_previous = {
+                    "title": previous_notice['title'],
+                    "created_at": previous_notice['created_at']
+                }
+        else:
+            returning_previous = {}
+
+        if target_notice_idx < len(notice_list):
+            next_notice         = notice_list[target_notice_idx+1]
+            returning_next = {
+                    "title": next_notice['title'],
+                    "created_at": next_notice['created_at']
+                }
+        else:
+            returning_next = {}
 
         return JsonResponse(
             {
                 "notice":{
-                    "title": target_notice.title,
-                    "author": target_notice.author,
-                    "created_at":target_notice.created_at,
-                    "content": target_notice.content,
-                    "attachments":[f for f in target_notice.notice_attachment.file]
+                    "title": target_notice['title'],
+                    # "author": Employee.objects.get(id = target_notice['author_id']).id,
+                    "created_at":target_notice['created_at'],
+                    "content": target_notice['content'],
+                    "attachments":[f.file for f in NoticeAttachment.objects.filter(notice_id = target_notice['id']).values()]
                 },
-                "previous":{
-                    "title": previous_notice.title,
-                    "created_at": previous_notice.created_at
-                },
-                "next":{
-                    "title": next_notice.title,
-                    "created_at": next_notice.created_at
-                }
+                "previous":returning_previous,
+                "next":returning_next
             },status=200
         )        
 
     def patch(self, request, notice_id):
         try:
             # employee_id   = request.employee.id
+            employee_id = 1
+
             target_notice = Notice.objects.get(id = notice_id)
-            data          = request.POST
+            data  = json.loads(request.body)
 
             NoticeAttachment.objects.filter(notice_id = target_notice.id).delete()
 
-            if target_notice.author != employee_id:
+            print(target_notice.author.id)
+            print(employee_id)
+
+            if target_notice.author.id != employee_id:
                 return JsonResponse(
                     {
                         "message": "ACCESS_DENIED"
@@ -150,8 +170,8 @@ class NoticeDetailView(View):
                     status=403
                 )
 
+            attachment_list = []
             if request.FILES.get('attachment'):
-                attachment_list = []
                 attachments     = request.FILES['attachment']
 
                 for file in attachments:
@@ -175,30 +195,31 @@ class NoticeDetailView(View):
                     file   = file_url
                 )
 
-            if data['title']:
-                target_notice.title = data['title']
-            if data['content']:
+            if 'content' in data:
                 target_notice.content = data['content']
+
+            target_notice.save()
 
             return JsonResponse(
                 {
-                'notice': target_notice.values(),
+                'notice': {
+                    'title':target_notice.title,
+                    'content':target_notice.content,
+                    'created_at':target_notice.created_at
+                },
                 'attachments': attachment_list
                 }, 
                 status=201)
 
-        except KeyError:
-            return JsonResponse(
-                {
-                'message':'KEY_ERROR'
-                }, 
-                status=400)
+        except KeyError as e :
+            return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
     
     def delete(self, request, notice_id):
         # employee_id   = request.employee.id
+        employee_id = 1
         target_notice = Notice.objects.get(id = notice_id)
        
-        if target_notice.author != employee_id:
+        if target_notice.author.id != employee_id:
             return JsonResponse(
                 {
                     "message": "ACCESS_DENIED"

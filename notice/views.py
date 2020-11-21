@@ -13,7 +13,6 @@ class NoticeListView(View):
 
     def get(self, request, **search):
         try:
-
             limit = 5
             offset = int(request.GET.get('offset', 0))
 
@@ -39,20 +38,10 @@ class NoticeListView(View):
                 } for notice in notice_page_list
             ]
 
-            return JsonResponse(
-                {
-                    "notices":returning_list
-                },
-                status=200
-                )
+            return JsonResponse({"notices":returning_list}, status=200)
 
-        except ValueError:
-            return JsonResponse(
-                {
-                    "message": "VALUE_ERROR"
-                },
-                status=400
-            )        
+        except ValueError as e:
+            return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)   
 
 
 class NoticeDetailView(View):
@@ -83,7 +72,6 @@ class NoticeDetailView(View):
             else:
                 file_url = None
     
-
             new_notice = Notice.objects.create(
                         title     = data['title'],
                         content   = data['content'],
@@ -112,13 +100,12 @@ class NoticeDetailView(View):
     
     def get(self, request, notice_id):
         target_notice       = dict(Notice.objects.filter(id = notice_id).values()[0])
-        notice_list = [notice for notice in Notice.objects.all().values()]
-        print('TARGET',target_notice)
-        print(notice_list)
+
+        notice_list         = [notice for notice in Notice.objects.all().values()]
         target_notice_idx   = notice_list.index(target_notice)
 
         if target_notice_idx > 1:
-            previous_notice     = notice_list[target_notice_idx-1]
+            previous_notice    = notice_list[target_notice_idx-1]
             returning_previous = {
                     "title": previous_notice['title'],
                     "created_at": previous_notice['created_at']
@@ -127,7 +114,7 @@ class NoticeDetailView(View):
             returning_previous = {}
 
         if target_notice_idx < len(notice_list):
-            next_notice         = notice_list[target_notice_idx+1]
+            next_notice    = notice_list[target_notice_idx+1]
             returning_next = {
                     "title": next_notice['title'],
                     "created_at": next_notice['created_at']
@@ -139,40 +126,31 @@ class NoticeDetailView(View):
             {
                 "notice":{
                     "title": target_notice['title'],
-                    # "author": Employee.objects.get(id = target_notice['author_id']).id,
                     "created_at":target_notice['created_at'],
                     "content": target_notice['content'],
                     "attachments":[f.file for f in NoticeAttachment.objects.filter(notice_id = target_notice['id']).values()]
                 },
                 "previous":returning_previous,
                 "next":returning_next
-            },status=200
+            },
+            status=200
         )        
 
     def patch(self, request, notice_id):
         try:
             # employee_id   = request.employee.id
-            employee_id = 1
-
+            employee_id   = 1
             target_notice = Notice.objects.get(id = notice_id)
-            data  = json.loads(request.body)
+            data          = json.loads(request.body)
 
             NoticeAttachment.objects.filter(notice_id = target_notice.id).delete()
 
-            print(target_notice.author.id)
-            print(employee_id)
-
             if target_notice.author.id != employee_id:
-                return JsonResponse(
-                    {
-                        "message": "ACCESS_DENIED"
-                    },
-                    status=403
-                )
+                return JsonResponse({"message": "ACCESS_DENIED"},status=403)
 
             attachment_list = []
             if request.FILES.get('attachment'):
-                attachments     = request.FILES['attachment']
+                attachments = request.FILES['attachment']
 
                 for file in attachments:
                     filename = str(uuid.uuid1()).replace('-','')
@@ -186,14 +164,18 @@ class NoticeDetailView(View):
                     )
                     file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
                     attachment_list.append(file_url)
+
             else:
                 file_url = None
             
             for file in attachment_list:
                 NoticeAttachment.objects.create(
-                    notice = new_notice.id,
+                    notice = target_notice.id,
                     file   = file_url
                 )
+
+            if 'title' in data:
+                target_notice.title = data['title']
 
             if 'content' in data:
                 target_notice.content = data['content']
@@ -220,18 +202,8 @@ class NoticeDetailView(View):
         target_notice = Notice.objects.get(id = notice_id)
        
         if target_notice.author.id != employee_id:
-            return JsonResponse(
-                {
-                    "message": "ACCESS_DENIED"
-                },
-                status=403
-            )
+            return JsonResponse({"message": "ACCESS_DENIED"},status=403)
         
         target_notice.delete()
 
-        return JsonResponse(
-            {
-                "message":"DELETED"
-            },
-            status=200
-        )
+        return JsonResponse({"message":"DELETED"},status=200)

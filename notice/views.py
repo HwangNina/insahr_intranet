@@ -10,7 +10,7 @@ from notice.models import Notice, NoticeAttachment
 from employee.models import Employee
 
 class NoticeListView(View):
-
+    
     def get(self, request, **search):
         try:
             limit = 5
@@ -48,9 +48,8 @@ class NoticeDetailView(View):
 
     def post(self, request):
         try:
-            employee_id = 1
-            # employee_id = request.employee.id
-            data  = json.loads(request.body)
+            employee_id = request.employee.id
+            data        = json.loads(request.body)
         
             attachment_list = []
             if request.FILES.get('attachment', None):
@@ -136,16 +135,18 @@ class NoticeDetailView(View):
             status=200
         )        
 
+    @jwt_utils.signin_decorator
     def patch(self, request, notice_id):
         try:
-            # employee_id   = request.employee.id
-            employee_id   = 1
+            employee_id   = request.employee.id
+            employee_auth = request.employee.auth
+
             target_notice = Notice.objects.get(id = notice_id)
             data          = json.loads(request.body)
 
             NoticeAttachment.objects.filter(notice_id = target_notice.id).delete()
 
-            if target_notice.author.id != employee_id:
+            if target_notice.author.id != employee_id or employee_auth != 1:
                 return JsonResponse({"message": "ACCESS_DENIED"},status=403)
 
             attachment_list = []
@@ -196,12 +197,13 @@ class NoticeDetailView(View):
         except KeyError as e :
             return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
     
+    @jwt_utils.signin_decorator
     def delete(self, request, notice_id):
-        # employee_id   = request.employee.id
+        employee_id   = request.employee.id
         employee_id = 1
         target_notice = Notice.objects.get(id = notice_id)
        
-        if target_notice.author.id != employee_id:
+        if target_notice.author.id != employee_id or employee_auth != 1:
             return JsonResponse({"message": "ACCESS_DENIED"},status=403)
         
         target_notice.delete()

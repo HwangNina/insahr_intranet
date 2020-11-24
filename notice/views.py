@@ -2,12 +2,26 @@ import json
 import boto3
 import datetime
 import uuid
+import jwt_utils
 
 from django.views import View
 from django.http import JsonResponse
 
 from notice.models import Notice, NoticeAttachment
 from employee.models import Employee
+
+class NoticeMainView(View):
+
+    def get(self, request):
+        recent_three = list(Notice.objects.all().values())[-3:]
+
+        returning_object = [{'title': notice['title'],
+                            'content':notice['content'],
+                            'date':notice['created_at']} for notice in recent_three]
+
+        return JsonResponse(
+            {"returning_notices" : returning_object}, status=200
+        )
 
 class NoticeListView(View):
     
@@ -45,10 +59,11 @@ class NoticeListView(View):
 
 
 class NoticeDetailView(View):
-
+    @jwt_utils.signin_decorator
     def post(self, request):
         try:
             employee_id = request.employee.id
+            employee_id = 1
             data        = json.loads(request.body)
         
             attachment_list = []
@@ -146,7 +161,7 @@ class NoticeDetailView(View):
 
             NoticeAttachment.objects.filter(notice_id = target_notice.id).delete()
 
-            if target_notice.author.id != employee_id or employee_auth != 1:
+            if target_notice.author.id != employee_id and employee_auth != 1:
                 return JsonResponse({"message": "ACCESS_DENIED"},status=403)
 
             attachment_list = []
@@ -203,7 +218,7 @@ class NoticeDetailView(View):
         employee_id = 1
         target_notice = Notice.objects.get(id = notice_id)
        
-        if target_notice.author.id != employee_id or employee_auth != 1:
+        if target_notice.author.id != employee_id and employee_auth != 1:
             return JsonResponse({"message": "ACCESS_DENIED"},status=403)
         
         target_notice.delete()

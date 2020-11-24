@@ -93,7 +93,7 @@ AWS_ACCESS_KEY_ID = my_settings.AWS_ACCESS_KEY['MY_AWS_ACCESS_KEY_ID']
 AWS_SECRET_ACCESS_KEY = my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY']
 
 AWS_REGION = 'ap-northeast-2'
-AWS_STORAGE_BUCKET_NAME = 'beap-test-shop'
+AWS_STORAGE_BUCKET_NAME = 'thisisninasbucket'
 AWS_S3_CUSTOM_DOMAIN = '%s.s3.%s.amazonaws.com' % (
     AWS_STORAGE_BUCKET_NAME, AWS_REGION)
 AWS_S3_OBJECT_PARAMETERS = {
@@ -133,11 +133,11 @@ LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'Asia/Seoul'
 
-USE_I18N = True
+# USE_I18N = True
 
-USE_L10N = True
+# USE_L10N = True
 
-USE_TZ = True
+# USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)

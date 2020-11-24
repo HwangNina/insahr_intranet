@@ -17,7 +17,7 @@ class NoticeMainView(View):
 
         returning_object = [{'title': notice['title'],
                             'content':notice['content'],
-                            'date':notice['created_at']} for notice in recent_three]
+                            'date':notice['created_at']} for notice in recent_three[::-1]]
 
         return JsonResponse(
             {"returning_notices" : returning_object}, status=200
@@ -224,3 +224,4 @@ class NoticeDetailView(View):
         target_notice.delete()
 
         return JsonResponse({"message":"DELETED"},status=200)
+        

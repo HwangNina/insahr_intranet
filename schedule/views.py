@@ -4,8 +4,8 @@ import jwt_utils
 from django.views     import View
 from django.http      import JsonResponse
 from django.db.models import Q
-from datetime import datetime
-from django.utils import timezone
+from datetime         import datetime
+from django.utils     import timezone
 
 from schedule.models import (
     Label, 

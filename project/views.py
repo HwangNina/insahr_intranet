@@ -1,4 +1,4 @@
-: set pasteimport json
+import json
 import requests
 
 from django.http import JsonResponse
@@ -7,7 +7,6 @@ from django.views import View
 
 from project.models import (
     Project,
-    PrivateProject,
     ProjectDetail,
     ProjectReview,
     ProjectParticipant,
@@ -20,9 +19,28 @@ from employee.models import (
     EmployeeDetail,
 )
 
-from .jwt_utils import signin_decorator
+from jwt_utils import signin_decorator
 
 class MainListView(View):
+    #@signin_decorator
+    def get(self, request):
+        recent_projects = list(Project.objects.all().values())[-4:]
+        employee_id = 1 #request.employee
+
+        box_list = [{
+            'id' : project['id'],
+            'title' : project['title'],
+            'description' : project['description'],
+            'start_date' : project['start_date'],
+            'end_date' : project['end_date'],
+            'is_private' : project['is_private']
+        } for project in recent_projects]
+
+        likes = ProjectParticipant.objects.filter(employee_id = employee_id)
+        like_list = [like.is_liked for like in likes] 
+        return JsonResponse({'main_list' : box_list, 'like_list' : like_list}, status=200)
+
+class ProjectListView(View):
     #@signin_decorator
 
     def post(self,request):
@@ -41,14 +59,16 @@ class MainListView(View):
 
     def get(self,request):
         projects = Project.objects.all()
+        employee_id = request.employee
         box_list = [{
             'title' : projects.title,
             'description' : projects.description,
             'start_date' : projects.start_date,
             'end_date' : projects.end_date,
-            'is_private' = projects.is_private
+            'is_private' : projects.is_private
         } for project in projects]
-        return JsonResponse({'MESSAGE' : 'SUCCESS'}, status=200)
+            #{'is_liked' : ProjectParticipants.objects.get(employee_id = employee_id).is_liked}]
+        return JsonResponse({'main_list' : box_list}, status=200)
 
     def delete(self,request,project_id):
         data = json.loads(request.body)
@@ -126,21 +146,18 @@ class ThreadView(View):
 #                )
 #
         return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
-
-    def get(self, request, project_id) :
-        employee_id = request.employee
-
-        project_title = Project.objects.get(id = project_id)
-        name = Employee.objects.get(id = employee_id).name_kor
-        persons = PrivateProject.objects.
-        projects_list = [{
-            'id' : project.id,
-            'title' : project.title,
-        } for project in projects]
-
-
-
-            'persons' : project.private_project_set.count
+#
+#    def get(self, request, project_id) :
+#        employee_id = request.employee
+#
+#        project_title = Project.objects.get(id = project_id)
+#        name = Employee.objects.get(id = employee_id).name_kor
+#        projects_list = [{
+#            'id' : project.id,
+#            'title' : project.title,
+#        } for project in projects]
+#
+ 
 
 
 

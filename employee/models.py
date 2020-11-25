@@ -18,12 +18,12 @@ class Employee(models.Model):
     password         = models.CharField(max_length=1000)
     name_kor         = models.CharField(max_length=50)
     name_eng         = models.CharField(max_length=50)
-    nickname         = models.CharField(max_length=50)
+    nickname         = models.CharField(max_length=50, null=True)
     rrn              = models.CharField(max_length=1000, null=True)
     mobile           = models.CharField(max_length=50)
-    emergency_num    = models.CharField(max_length=50)
-    company_email    = models.EmailField(max_length=254)
-    personal_email   = models.EmailField(max_length=254)
+    emergency_num    = models.CharField(max_length=50, null=True)
+    company_email    = models.EmailField(max_length=254, null=True)
+    personal_email   = models.EmailField(max_length=254, null=True)
     bank_name        = models.CharField(max_length=50, null=True)
     bank_account     = models.CharField(max_length=1000, null=True)
     passport_num     = models.CharField(max_length=1000, null=True)
@@ -35,20 +35,3 @@ class Employee(models.Model):
     
     class Meta():
         db_table = 'employees'
-
-class EmployeeDetail(models.Model):
-    employee         = models.OneToOneField(Employee, on_delete=models.CASCADE)
-    joined_at        = models.DateField(auto_now=False, auto_now_add=False, null=True)
-    probation_period = models.CharField(max_length=50, null=True)
-    worked_since     = models.DateField(auto_now=False, auto_now_add=False, null=True)
-    total_experience = models.CharField(max_length=50, null=True)
-    annual_vacation  = models.IntegerField(null=True)
-    annual_vacation_permission = models.ForeignKey('Employee', null=True, on_delete=models.SET_NULL, related_name='employee')
-    status           = models.CharField(max_length=50, null=True)
-    promotion_date   = models.DateField(auto_now=False, auto_now_add=False, null=True)
-    promoted_at      = models.DateField(auto_now=False, auto_now_add=False, null=True)
-    pass_num         = models.CharField(max_length=50, null=True)
-    etc              = models.TextField(null=True)
-    
-    class Meta():
-        db_table = 'employee_details'

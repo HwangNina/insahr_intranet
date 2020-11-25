@@ -16,7 +16,7 @@ from project.models import (
 from employee.models import (
     Auth,
     Employee,
-    EmployeeDetail,
+    # EmployeeDetail,
 )
 
 from jwt_utils import signin_decorator
@@ -62,21 +62,20 @@ class ProjectListView(View):
         return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
 
     def get(self,request):
-        projects = Project.objects.all().prefetch_related('projectparticipant_set')
+        recent_projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
         employee_id = 1 #request.employee
-
+    
         project_list = [{
-            'id' : project.id,
-            'title' : project.title,
-            'description' : project.description,
-            'start_date' : project.start_date.date(),
-            'end_date' : project.end_date.date(),
-            'is_private' : project.is_private,
-            'is_liked' : project.is_liked
-        } for project in projects]
+                'id' : project.id,
+                'title' : project.title,
+                'description' : project.description,
+                'start_date' : project.start_date.date(),
+                'end_date' : project.end_date.date(),
+                'is_private' : project.is_private,
+                'participants': len([par.employee for par in recent_projects.projectparticipant_set.all()])
+            } for project in recent_projects]
+        
 
-#        likes = ProjectParticipant.objects.filter(employee_id = employee_id)
-#        like_list = [like.is_liked for like in likes]
 
         return JsonResponse({'main_list' : project_list}, status=200)
 

@@ -62,7 +62,7 @@ class ProjectListView(View):
         return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
 
     def get(self,request):
-        projects = Project.objects.all().prefetch_related('projectparticipant_set')
+        projects = Project.objects.all()
         employee_id = 1 #request.employee
 
         project_list = [{
@@ -72,7 +72,8 @@ class ProjectListView(View):
             'start_date' : project.start_date.date(),
             'end_date' : project.end_date.date(),
             'is_private' : project.is_private,
-            'is_liked' : project.is_liked
+            'is_liked' : project.is_liked,
+            'participants' : project.projectparticipant
         } for project in projects]
 
 #        likes = ProjectParticipant.objects.filter(employee_id = employee_id)

@@ -27,25 +27,28 @@ class MainListView(View):
         recent_projects = list(Project.objects.all().values())[-4:]
         employee_id = 1 #request.employee
 
-        box_list = [{
+        project_list = [{
             'id' : project['id'],
             'title' : project['title'],
             'description' : project['description'],
-            'start_date' : project['start_date'],
-            'end_date' : project['end_date'],
+            'start_date' : project['start_date'].date(),
+            'end_date' : project['end_date'].date(),
             'is_private' : project['is_private']
         } for project in recent_projects]
 
         likes = ProjectParticipant.objects.filter(employee_id = employee_id)
-        like_list = [like.is_liked for like in likes] 
-        return JsonResponse({'main_list' : box_list, 'like_list' : like_list}, status=200)
+        like_list = [{
+            'project_id' : like.project_id,
+            'is_liked' : like.is_liked
+        }for like in likes]
+        #[like.is_liked for like in likes]
+        return JsonResponse({'main_list' : project_list, 'like_list' : like_list}, status=200)
 
 class ProjectListView(View):
     #@signin_decorator
-
     def post(self,request):
         data = json.loads(request.body)
-        employee_id = request.employee
+        employee_id = 1 #request.employee
 
         Project.objects.create(
             employee = employee_id,
@@ -58,17 +61,23 @@ class ProjectListView(View):
         return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
 
     def get(self,request):
-        projects = Project.objects.all()
-        employee_id = request.employee
-        box_list = [{
-            'title' : projects.title,
-            'description' : projects.description,
-            'start_date' : projects.start_date,
-            'end_date' : projects.end_date,
-            'is_private' : projects.is_private
-        } for project in projects]
-            #{'is_liked' : ProjectParticipants.objects.get(employee_id = employee_id).is_liked}]
-        return JsonResponse({'main_list' : box_list}, status=200)
+        recent_projects = Project.objects.all()
+        employee_id = 1 #request.employee
+
+        project_list = [{
+            'id' : project.id,
+            'title' : project.title,
+            'description' : project.description,
+            'start_date' : project.start_date.date(),
+            'end_date' : project.end_date.date(),
+            'is_private' : project.is_private,
+            'is_liked' : [[x.is_liked for x in row]for row in project.projectparticipant_set.all()]
+        } for project in recent_projects.prefetch_related('projectparticipant_set')]
+
+#        likes = ProjectParticipant.objects.filter(employee_id = employee_id)
+#        like_list = [like.is_liked for like in likes]
+
+        return JsonResponse({'main_list' : project_list, 'like_list' : like_list}, status=200)
 
     def delete(self,request,project_id):
         data = json.loads(request.body)

@@ -16,7 +16,7 @@ from project.models import (
 from employee.models import (
     Auth,
     Employee,
-    EmployeeDetail,
+    # EmployeeDetail,
 )
 
 from jwt_utils import signin_decorator
@@ -73,11 +73,8 @@ class ProjectListView(View):
             'end_date' : project.end_date.date(),
             'is_private' : project.is_private,
             'is_liked' : project.is_liked,
-            'participants' : project.projectparticipant
+            'participants': len([par.employee for par in project.projectparticipant_set.all()])
         } for project in projects]
-
-#        likes = ProjectParticipant.objects.filter(employee_id = employee_id)
-#        like_list = [like.is_liked for like in likes]
 
         return JsonResponse({'main_list' : project_list}, status=200)
 

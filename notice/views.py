@@ -4,10 +4,13 @@ import datetime
 import uuid
 import jwt_utils
 
-from django.views import View
-from django.http import JsonResponse
+from functools        import reduce
+from operator         import __or__ as OR
+from django.views     import View
+from django.http      import JsonResponse
+from django.db.models import Q
 
-from notice.models import Notice, NoticeAttachment
+from notice.models   import Notice, NoticeAttachment
 from employee.models import Employee
 
 class NoticeMainView(View):
@@ -17,7 +20,7 @@ class NoticeMainView(View):
 
         returning_object = [{'title': notice['title'],
                             'content':notice['content'],
-                            'date':notice['created_at']} for notice in recent_three]
+                            'date':notice['created_at']} for notice in recent_three[::-1]]
 
         return JsonResponse(
             {"returning_notices" : returning_object}, status=200
@@ -25,15 +28,27 @@ class NoticeMainView(View):
 
 class NoticeListView(View):
     
-    def get(self, request, **search):
+    def get(self, request):
         try:
             limit = 5
-            offset = int(request.GET.get('offset', 0))
 
-            if search:
-                notice_list = Notice.objects.filter(title__icontains = search['search']).values()
+            queries = dict(request.GET)
+
+            if queries.get('offset'):
+                offset = int(queries['offset'][0])
+                del queries['offset']
             else:
-                notice_list = Notice.objects.all().values()
+                offset = 0
+
+            if queries.get('search'):
+                conditions = []
+                search_list = queries.get('search')[0].split(' ')
+                for s in search_list:
+                    conditions.append(Q(title__icontains = s))
+                notice_list = Notice.objects.filter(reduce(OR, conditions))
+
+            else:
+                notice_list = Notice.objects.all()
 
             if offset > len(notice_list):
                 return JsonResponse(
@@ -41,14 +56,14 @@ class NoticeListView(View):
                     'message':'OFFSET_OUT_OF_RANGE'
                     },
                     status=400)
-            
+
             notice_page_list = [notice for notice in notice_list][offset:offset+limit]
 
             returning_list = [
                 {
-                'no': notice['id'],
-                'title': notice['title'],
-                'date': notice['created_at']
+                'no': notice.id,
+                'title': notice.title,
+                'date': notice.created_at
                 } for notice in notice_page_list
             ]
 
@@ -63,7 +78,6 @@ class NoticeDetailView(View):
     def post(self, request):
         try:
             employee_id = request.employee.id
-            employee_id = 1
             data        = json.loads(request.body)
         
             attachment_list = []
@@ -214,8 +228,7 @@ class NoticeDetailView(View):
     
     @jwt_utils.signin_decorator
     def delete(self, request, notice_id):
-        employee_id   = request.employee.id
-        employee_id = 1
+        employee_id = request.employee.id
         target_notice = Notice.objects.get(id = notice_id)
        
         if target_notice.author.id != employee_id and employee_auth != 1:
@@ -224,3 +237,4 @@ class NoticeDetailView(View):
         target_notice.delete()
 
         return JsonResponse({"message":"DELETED"},status=200)
+        

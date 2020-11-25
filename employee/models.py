@@ -19,7 +19,7 @@ class Employee(models.Model):
     name_kor         = models.CharField(max_length=50)
     name_eng         = models.CharField(max_length=50)
     nickname         = models.CharField(max_length=50, null=True)
-    rrn              = models.CharField(max_length=1000, null=True)
+    rrn              = models.CharField(max_length=1000)
     mobile           = models.CharField(max_length=50)
     emergency_num    = models.CharField(max_length=50, null=True)
     company_email    = models.EmailField(max_length=254, null=True)
@@ -27,6 +27,7 @@ class Employee(models.Model):
     bank_name        = models.CharField(max_length=50, null=True)
     bank_account     = models.CharField(max_length=1000, null=True)
     passport_num     = models.CharField(max_length=1000, null=True)
+    post_num         = models.CharField(max_length=50, null=True)
     address          = models.CharField(max_length=200, null=True)
     detailed_address = models.CharField(max_length=200, null=True)
 

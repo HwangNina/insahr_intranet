@@ -7,9 +7,8 @@ class Project(models.Model):
     is_private = models.BooleanField(default = False)
     start_date = models.DateTimeField(auto_now=False, auto_now_add=False, default = timezone.now )
     end_date = models.DateTimeField(auto_now=False, auto_now_add=False, default = timezone.now)
-    employee = models.ForeignKey('employee.Employee', on_delete = models.CASCADE, default ='')
-    is_liked = models.BooleanField(default = False, null = True)
-
+    created_by = models.ForeignKey('employee.Employee', on_delete = models.CASCADE, default ='')
+ 
     class Meta :
         db_table = 'projects'
 
@@ -44,4 +43,11 @@ class ProjectAttachment(models.Model):
 
     class Meta :
         db_table = 'project_attachments'
+
+class ProjectLike(models.Model):
+    employee = models.ForeignKey('employee.Employee', on_delete = models.CASCADE)
+    project = models.ForeignKey('project.Project', on_delete = models.CASCADE)
+
+    class Meta :
+        db_table = 'project_likes'
 

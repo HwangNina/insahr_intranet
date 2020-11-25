@@ -8,6 +8,7 @@ class Project(models.Model):
     start_date = models.DateTimeField(auto_now=False, auto_now_add=False, default = timezone.now )
     end_date = models.DateTimeField(auto_now=False, auto_now_add=False, default = timezone.now)
     employee = models.ForeignKey('employee.Employee', on_delete = models.CASCADE, default ='')
+    is_liked = models.BooleanField(default = False, null = True)
 
     class Meta :
         db_table = 'projects'
@@ -33,7 +34,6 @@ class ProjectReview(models.Model):
 class ProjectParticipant(models.Model):
     employee = models.ForeignKey('employee.Employee', on_delete = models.CASCADE)
     project = models.ForeignKey('Project', on_delete = models.CASCADE)
-    is_liked = models.BooleanField(default = False)
 
     class Meta :
         db_table = 'project_participants'

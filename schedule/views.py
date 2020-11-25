@@ -43,12 +43,11 @@ class ScheduleListView(View):
 
 
 class ScheduleDetailView(View):
-    # @jwt_utils.signin_decorator
+    @jwt_utils.signin_decorator
     def post(self, request):
         try:
             data        = json.loads(request.body)
-            # employee_id = request.employee.id
-            employee_id = 1
+            employee_id = request.employee.id
 
             if len(data['participants']) == 0:
                 participant_list = Employee.objects.all().values()

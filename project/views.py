@@ -74,8 +74,6 @@ class ProjectListView(View):
                 'is_private' : project.is_private,
                 'participants': len([par.employee for par in recent_projects.projectparticipant_set.all()])
             } for project in recent_projects]
-        
-
 
         return JsonResponse({'main_list' : project_list}, status=200)
 

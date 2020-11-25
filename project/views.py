@@ -64,9 +64,9 @@ class ProjectListView(View):
         return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
 
     def get(self,request):
-        projects = Project.objects.all()
+        recent_projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
         employee_id = 1 #request.employee
-
+    
         project_list = [{
             'id' : project.id,
             'title' : project.title,

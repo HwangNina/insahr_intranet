@@ -7,6 +7,7 @@ from django.views import View
 
 from project.models import (
     Project,
+    ProjectLike,
     ProjectDetail,
     ProjectReview,
     ProjectParticipant,
@@ -23,26 +24,27 @@ from jwt_utils import signin_decorator
 
 class MainListView(View):
     #@signin_decorator
-    def get(self, request):
-        recent_projects = list(Project.objects.all().values())[-4:]
+    def get(self,request):
+        recent_projects = list(Project.objects.all())[-4:]
+        #projects = Project.objects.all()
         employee_id = 1 #request.employee
 
         project_list = [{
-            'id' : project['id'],
-            'title' : project['title'],
-            'description' : project['description'],
-            'start_date' : project['start_date'].date(),
-            'end_date' : project['end_date'].date(),
-            'is_private' : project['is_private'],
-            'is_liked' : project['is_liked']
+            'id' : project.id,
+            'title' : project.title,
+            'description' : project.description,
+            'start_date' : project.start_date.date(),
+            'end_date' : project.end_date.date(),
+            'is_private' : project.is_private,
+            'participants': len([par.employee for par in project.projectparticipant_set.all()])
         } for project in recent_projects]
 
-#        likes = ProjectParticipant.objects.filter(employee_id = employee_id)
-#        like_list = [{
-#            'project_id' : like.project_id,
-#            'is_liked' : like.is_liked
-#        }for like in likes]
-        #[like.is_liked for like in likes]
+        if ProjectLike.objects.filter(employee_id = employee_id).exists() :
+            likes = ProjectLike.objects.filter(employee_id = employee_id)
+            like_list = [like_project.project_id for like_project in likes]
+
+            return JsonResponse({'main_list' : project_list, 'like_project_list' : like_list}, status=200)
+
         return JsonResponse({'main_list' : project_list}, status=200)
 
 class ProjectListView(View):
@@ -52,7 +54,7 @@ class ProjectListView(View):
         employee_id = 1 #request.employee
 
         Project.objects.create(
-            employee = employee_id,
+            created_by = employee_id,
             title = data['title'],
             description = data['description'],
             is_private = data['is_private'],
@@ -75,7 +77,11 @@ class ProjectListView(View):
             'participants': len([par.employee for par in project.projectparticipant_set.all()])
         } for project in projects]
 
-        like_list = ProjectLike 
+        if ProjectLike.objects.filter(employee_id = employee_id).exists() :
+            likes = ProjectLike.objects.filter(employee_id = employee_id)
+            like_list = [like_project.project_id for like_project in likes]
+
+            return JsonResponse({'main_list' : project_list, 'like_project_list' : like_list}, status=200)
 
         return JsonResponse({'main_list' : project_list}, status=200)
 

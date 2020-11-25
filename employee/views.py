@@ -24,9 +24,13 @@ class SignUpView(View):
 
             email_regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
 
-            if (not (re.search(email_regex, data['company_email'])) or 
-                not (re.search(email_regex, data['personal_email']))):
-                return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
+            if data['company_email'] != '' :
+                if not re.search(email_regex, data['company_email']):
+                    return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
+
+            if data['personal_email'] != '' :
+                if not re.search(email_regex, data['personal_email']):
+                    return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
 
             if Employee.objects.filter(account=data['account']).exists():
                 return JsonResponse({"message": "ACCOUNT_EXISTS"}, status=400)
@@ -67,9 +71,9 @@ class SignUpView(View):
                 detailed_address = data['detailed_address'],
             ).save()
 
-            EmployeeDetail(
-                employee = Employee.objects.get(account = data['account'])
-            ).save()
+#            EmployeeDetail(
+#                employee = Employee.objects.get(account = data['account'])
+#            ).save()
             
             return JsonResponse({"message": "SIGNUP_SUCCESS"}, status=200)
 
@@ -110,9 +114,9 @@ class SignInView(View):
 
 
 class EmployeeInfoView(View):
-    @jwt_utils.signin_decorator    
+    #@jwt_utils.signin_decorator    
     def get(self, request):
-        employee_id     = request.employee.id
+        employee_id     = 1 #request.employee.id
         target_employee = Employee.objects.filter(id = employee_id).values()[0]
 
         def decryption(info):

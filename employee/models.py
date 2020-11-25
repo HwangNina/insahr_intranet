@@ -13,6 +13,7 @@ class Auth(models.Model):
 
 class Employee(models.Model):
     auth             = models.ForeignKey(Auth, on_delete=models.CASCADE)
+    # profile_image    = models.ImageField(_(""), upload_to=None, height_field=None, width_field=None, max_length=None)
     account          = models.CharField(max_length=50)
     password         = models.CharField(max_length=1000)
     name_kor         = models.CharField(max_length=50)

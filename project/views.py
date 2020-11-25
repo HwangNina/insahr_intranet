@@ -72,9 +72,10 @@ class ProjectListView(View):
             'start_date' : project.start_date.date(),
             'end_date' : project.end_date.date(),
             'is_private' : project.is_private,
-            'is_liked' : project.is_liked,
             'participants': len([par.employee for par in project.projectparticipant_set.all()])
         } for project in projects]
+
+        like_list = ProjectLike 
 
         return JsonResponse({'main_list' : project_list}, status=200)
 

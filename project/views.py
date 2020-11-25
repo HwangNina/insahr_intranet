@@ -33,16 +33,17 @@ class MainListView(View):
             'description' : project['description'],
             'start_date' : project['start_date'].date(),
             'end_date' : project['end_date'].date(),
-            'is_private' : project['is_private']
+            'is_private' : project['is_private'],
+            'is_liked' : project['is_liked']
         } for project in recent_projects]
 
-        likes = ProjectParticipant.objects.filter(employee_id = employee_id)
-        like_list = [{
-            'project_id' : like.project_id,
-            'is_liked' : like.is_liked
-        }for like in likes]
+#        likes = ProjectParticipant.objects.filter(employee_id = employee_id)
+#        like_list = [{
+#            'project_id' : like.project_id,
+#            'is_liked' : like.is_liked
+#        }for like in likes]
         #[like.is_liked for like in likes]
-        return JsonResponse({'main_list' : project_list, 'like_list' : like_list}, status=200)
+        return JsonResponse({'main_list' : project_list}, status=200)
 
 class ProjectListView(View):
     #@signin_decorator
@@ -61,7 +62,7 @@ class ProjectListView(View):
         return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
 
     def get(self,request):
-        recent_projects = Project.objects.all()
+        projects = Project.objects.all().prefetch_related('projectparticipant_set')
         employee_id = 1 #request.employee
 
         project_list = [{
@@ -71,13 +72,13 @@ class ProjectListView(View):
             'start_date' : project.start_date.date(),
             'end_date' : project.end_date.date(),
             'is_private' : project.is_private,
-            'is_liked' : [[x.is_liked for x in row]for row in project.projectparticipant_set.all()]
-        } for project in recent_projects.prefetch_related('projectparticipant_set')]
+            'is_liked' : project.is_liked
+        } for project in projects]
 
 #        likes = ProjectParticipant.objects.filter(employee_id = employee_id)
 #        like_list = [like.is_liked for like in likes]
 
-        return JsonResponse({'main_list' : project_list, 'like_list' : like_list}, status=200)
+        return JsonResponse({'main_list' : project_list}, status=200)
 
     def delete(self,request,project_id):
         data = json.loads(request.body)

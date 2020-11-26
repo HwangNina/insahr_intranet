@@ -25,8 +25,7 @@ from jwt_utils import signin_decorator
 class MainListView(View):
     #@signin_decorator
     def get(self,request):
-        recent_projects = list(Project.objects.all())[-4:]
-        #projects = Project.objects.all()
+        recent_projects = list(Project.objects.all())[-4:] 
         employee_id = 1 #request.employee
 
         project_list = [{
@@ -47,6 +46,20 @@ class MainListView(View):
 
         return JsonResponse({'main_list' : project_list}, status=200)
 
+class PeopleView(View):
+    def get(self,request):
+        try:
+            people = Employee.objects.all()
+            people_list = [{
+                'id' : person.id,
+                'name' : person.name_kor
+            } for person in people]
+
+            return JsonResponse({'people_list' : people_list}, status=200)
+
+        except Exception as e:
+            return JsonResponse({'MESSAGE' : f"EXCEPT_ERROR:{e}"}, status=400)
+
 class ProjectListView(View):
     #@signin_decorator
 
@@ -64,21 +77,30 @@ class ProjectListView(View):
             )
 
             #person = employee_id값
-            for person in data['participant']:
-                ProjectParticipant.objects.create(
-                    employee = Employee.objects.get(id=person),
-                    project = Project.objects.get(id=new_project.id)
-                )
+            if data['is_private'] == 1 :
+                for person in data['participant']:
+                    ProjectParticipant.objects.create(
+                        employee = Employee.objects.get(id=person),
+                        project = Project.objects.get(id=new_project.id)
+                    )
+            else :
+                employees = Employee.objects.all()
+                for people in employees :
+                    ProjectParticipant.objects.create(
+                        employee = Employee.objects.get(id=people.id),
+                        project = Project.objects.get(id=new_project.id)
+                    )
+
             return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
 
         except KeyError as e :
-            return JsonResponse({'message': f'KEY_ERROR:{e}'}, status=400)
+            return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
 
         except ValueError as e :
-            return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)
+            return JsonResponse({'MESSAGE': f'VALUE_ERROR:{e}'}, status=400)
 
     def get(self,request):
-        recent_projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
+        projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
         employee_id = 1 #request.employee
 
         project_list = [{
@@ -94,7 +116,6 @@ class ProjectListView(View):
         if ProjectLike.objects.filter(employee_id = employee_id).exists() :
             likes = ProjectLike.objects.filter(employee_id = employee_id)
             like_list = [like_project.project_id for like_project in likes]
-
             return JsonResponse({'main_list' : project_list, 'like_project_list' : like_list}, status=200)
 
         return JsonResponse({'main_list' : project_list}, status=200)
@@ -111,18 +132,44 @@ class ProjectListView(View):
     def patch(self,request,project_id):
         data = json.loads(request.body)
         employee_id = 1 #request.employee
-        post = Project.objects.filter(id == data['id'])
+        post = Project.objects.get(id = project_id)
+        #project_id는 하나이니까 filter아니고 get 
 
-        if post.employee_id == int(employee_id) :
+        if post.created_by == int(employee_id) :
             post.update(
                 title = data['title'],
                 description = data['description'],
                 is_private = data['is_private'],
                 start_date = data['start_date'],
                 end_date = data['end_date'],
-                participant = data['participant'] 
-
             )
+
+            if data['is_private'] == 1 :
+                for person in data['participant']:
+                    ProjectParticipant.objects.update(
+                        employee = Employee.objects.get(id=person),
+                        #project = Project.objects.get(id=new_project.id)
+                    )
+            else :
+                employees = Employee.objects.all()
+                for people in employees :
+                    ProjectParticipant.objects.update(
+                        employee = Employee.objects.get(id=people.id),
+                        #project = Project.objects.get(id=new_project.id)
+                    )
+
+
+# 테스트중
+            update_project = Project.objects.update(
+                # 수정은 작성한 사람만 할 수 있으므로 created_by_id 받을 필요 없음.
+                #created_by = Employee.objects.get(id=employee_id),
+                title = data['title'],
+                description = data['description'],
+                is_private = data['is_private'],
+                start_date = data['start_date'],
+                end_date = data['end_date']
+            )
+
             return JsonResponse({'MESSAGE' : 'UPDATE_SUCCESS'}, status = 200)
 
 class ThreadView(View):

@@ -49,24 +49,38 @@ class MainListView(View):
 
 class ProjectListView(View):
     #@signin_decorator
-    def post(self,request):
-        data = json.loads(request.body)
-        employee_id = 1 #request.employee
 
-        Project.objects.create(
-            created_by = employee_id,
-            title = data['title'],
-            description = data['description'],
-            is_private = data['is_private'],
-            start_date = data['start_data'],
-            end_date = data['end_date']
-        )
-        return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
+    def post(self,request):
+        try:
+            data = json.loads(request.body)
+            employee_id = 1 #request.employee
+            new_project = Project.objects.create(
+                created_by = Employee.objects.get(id=employee_id),
+                title = data['title'],
+                description = data['description'],
+                is_private = data['is_private'],
+                start_date = data['start_date'],
+                end_date = data['end_date']
+            )
+
+            #person = employee_id값
+            for person in data['participant']:
+                ProjectParticipant.objects.create(
+                    employee = Employee.objects.get(id=person),
+                    project = Project.objects.get(id=new_project.id)
+                )
+            return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
+
+        except KeyError as e :
+            return JsonResponse({'message': f'KEY_ERROR:{e}'}, status=400)
+
+        except ValueError as e :
+            return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)
 
     def get(self,request):
         recent_projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
         employee_id = 1 #request.employee
-    
+
         project_list = [{
             'id' : project.id,
             'title' : project.title,
@@ -87,16 +101,16 @@ class ProjectListView(View):
 
     def delete(self,request,project_id):
         data = json.loads(request.body)
-        employee_id = request.employee
+        employee_id = 1 #request.employee
         post = get_object_or_404(Project, pk=project_id)
 
-        if post.employee_id == int(employee_id) :
+        if post.created_by.id == int(employee_id) :
             post.delete()
             return JsonResponse({'MESSAGE' : 'DELETE_SUCCESS'}, status=200)
 
     def patch(self,request,project_id):
         data = json.loads(request.body)
-        employee_id = request.employee
+        employee_id = 1 #request.employee
         post = Project.objects.filter(id == data['id'])
 
         if post.employee_id == int(employee_id) :
@@ -104,8 +118,10 @@ class ProjectListView(View):
                 title = data['title'],
                 description = data['description'],
                 is_private = data['is_private'],
-                start_date = data['start_data'],
-                end_date = data['end_date']
+                start_date = data['start_date'],
+                end_date = data['end_date'],
+                participant = data['participant'] 
+
             )
             return JsonResponse({'MESSAGE' : 'UPDATE_SUCCESS'}, status = 200)
 

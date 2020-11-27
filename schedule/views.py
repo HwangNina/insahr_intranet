@@ -1,5 +1,8 @@
 import json
+import boto3
 import jwt_utils
+import uuid
+import my_settings
 
 from django.views     import View
 from django.http      import JsonResponse
@@ -43,11 +46,17 @@ class ScheduleListView(View):
 
 
 class ScheduleDetailView(View):
-    @jwt_utils.signin_decorator
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=my_settings.AWS_ACCESS_KEY['MY_AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key=my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY']
+    )
+    # @jwt_utils.signin_decorator
     def post(self, request):
         try:
-            data        = json.loads(request.body)
-            employee_id = request.employee.id
+            data = eval(request.POST['data'])
+            # employee_id = request.employee.id
+            employee_id = 3
 
             if len(data['participants']) == 0:
                 participant_list = Employee.objects.all().values()
@@ -55,15 +64,12 @@ class ScheduleDetailView(View):
                 participant_list = data['participants']
 
             attachment_list = []
-            if request.FILES.get('attachment', None):
-                attachments = request.FILES['attachment']
-
-                for file in attachments:
+            if request.FILES.getlist('attachment', None):
+                for file in request.FILES.getlist('attachment'): 
                     filename = str(uuid.uuid1()).replace('-','')
-                
                     self.s3_client.upload_fileobj(
-                        attachment,
-                        "insahr_notice_attachment",
+                        file,
+                        "thisisninasbucket",
                         filename,
                         ExtraArgs={
                             "ContentType": file.content_type
@@ -74,6 +80,8 @@ class ScheduleDetailView(View):
             else:
                 file_url = None
 
+            created_by = Employee.objects.get(id = employee_id)
+
             new_schedule = Schedule.objects.create(
                 label       = Label.objects.get(id = data['label']),
                 title       = data['title'],
@@ -81,13 +89,13 @@ class ScheduleDetailView(View):
                 begin_at    = timezone.make_aware(datetime.strptime(data['begin_at'], '%Y-%m-%d %H:%M:%S')),
                 finish_at   = timezone.make_aware(datetime.strptime(data['finish_at'], '%Y-%m-%d %H:%M:%S')),
                 description = data['description'],
-                written_by  = Employee.objects.get(id = employee_id),
-                amended_by  = Employee.objects.get(id = employee_id),
+                written_by  = created_by,
+                amended_by  = created_by,
             )
 
             for file in attachment_list:
                 ScheduleAttachment.objects.create(
-                    schedule = new_schedule.id,
+                    schedule = Schedule.objects.get(id = new_schedule.id),
                     file     = file_url
                 )
 
@@ -113,7 +121,7 @@ class ScheduleDetailView(View):
 
         return JsonResponse(
             {
-                'label': target_schedule.label.name,
+                'schedule':{'label': target_schedule.label.name,
                 'title': target_schedule.title,
                 'location': target_schedule.location,
                 'begin_at': target_schedule.begin_at,
@@ -122,11 +130,9 @@ class ScheduleDetailView(View):
                 'written_by': str(target_schedule.written_by),
                 'amended_by': str(target_schedule.amended_by),
                 'craeted_at': target_schedule.created_at,
-                'updated_at': target_schedule.updated_at,
+                'updated_at': target_schedule.updated_at},
                 'participants': [participant.employee.name_kor for participant in target_schedule.scheduleparticipant_set.all()],
-                "attachments":[f.file 
-                               for f 
-                               in target_schedule.scheduleattachment_set.all()]
+                'attachments':[{'id':f.id, 'file':f.file} for f in target_schedule.scheduleattachment_set.all()]
             },
             status=200
         )
@@ -134,7 +140,7 @@ class ScheduleDetailView(View):
     @jwt_utils.signin_decorator
     def patch(self, request, schedule_id):
         try:
-            data            = json.loads(request.body)
+            data = eval(request.POST['data'])
             employee_id     = request.employee.id
             employee_auth   = request.employee.auth
 
@@ -149,13 +155,12 @@ class ScheduleDetailView(View):
                         ScheduleAttachment.objects.filter(id = file).delete()
 
             attachment_list = []
-            if request.FILES.get('attachment'):
-                attachments = request.FILES['attachment']
-                for file in attachments:
+            if request.FILES.getlist('attachment', None):
+                for file in request.FILES.getlist('attachment'): 
                     filename = str(uuid.uuid1()).replace('-','')
                     self.s3_client.upload_fileobj(
-                        attachment,
-                        "insahr_notice_attachment",
+                        file,
+                        "thisisninasbucket",
                         filename,
                         ExtraArgs={
                             "ContentType": file.content_type
@@ -165,17 +170,20 @@ class ScheduleDetailView(View):
                     attachment_list.append(file_url)
             else:
                 file_url = None
-
-            
             
             schedule_field_list = [field.name for field in Schedule._meta.get_fields()]
 
             for key in data.keys():
                 if key in schedule_field_list:
                     target_schedule.update(**{key : data[key]})
-                  
 
             target_schedule.update(updated_at = datetime.datetime.now().strftime("%Y-%m-%d"))
+
+            for file in attachment_list:
+                NoticeAttachment.objects.create(
+                    notice = Notice.objects.get(id = target_schedule['id']),
+                    file   = file_url
+                )
 
             return JsonResponse({'message':'MODIFICATION_SUCCESS'}, status=200)
 

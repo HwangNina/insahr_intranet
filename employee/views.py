@@ -7,6 +7,8 @@ import my_settings
 import encrypt_utils
 import jwt_utils
 import requests
+import boto3
+import uuid
 
 from django.http     import JsonResponse
 from django.views    import View
@@ -39,7 +41,6 @@ class SignUpView(View):
                 else:
                     additional_infos[index] = None
 
-
             # insert record
             Employee(
                 auth              = Auth.objects.get(id = 5),
@@ -51,7 +52,8 @@ class SignUpView(View):
                 mobile            = data['mobile'],
                 post_num          = additional_infos[0],
                 address           = additional_infos[1],
-                detailed_address  = additional_infos[2]
+                detailed_address  = additional_infos[2],
+                profile_image     = 'https://freepikpsd.com/wp-content/uploads/2019/10/default-profile-image-png-1-Transparent-Images.png'
             ).save()
             
             return JsonResponse({"message": "SIGNUP_SUCCESS"}, status=200)
@@ -172,3 +174,54 @@ class EmployeeInfoView(View):
 
         except ValueError as e:
             return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)
+
+class ProfileImageView(View):
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=my_settings.AWS_ACCESS_KEY['MY_AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key=my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY']
+    )
+    # @jwt_utils.signin_decorator
+    def patch(self, request):
+        try:
+            # employee_id = request.employee.id
+            employee_id = 3
+    
+            if request.FILES.get('attachment', None):
+                filename = str(uuid.uuid1()).replace('-','')
+                self.s3_client.upload_fileobj(
+                    file,
+                    'thisisninasbucket',
+                    filename,
+                    ExtraArgs={
+                        'ContentType':file.content_type
+                    }
+                )
+                file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/profile-image/{filename}"
+            
+            else:
+                file_url = None
+            
+            target_employee = Employee.objects.get(id = employee_id)
+            target_employee.profile_image = file_url
+            target_employee.save()
+
+            return JsonResponse({'message': 'MODIFIACTION_SUCCESS'}, status=200)
+
+        except KeyError as e :
+            return JsonResponse({'message': f'KEY_ERROR:{e}'}, status=400)
+
+        except ValueError as e:
+            return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)
+
+    # @jwt_utils.signin_decorator
+    def delete(self, request):
+        # employee_id = request.employee.id
+        employee_id = 3
+
+        target_employee = Employee.objects.get(id = employee_id)
+        target_employee.profile_image = 'https://freepikpsd.com/wp-content/uploads/2019/10/default-profile-image-png-1-Transparent-Images.png'
+        target_employee.save()
+
+        return JsonResponse({'message':'DELETED'}, status=200)
+        

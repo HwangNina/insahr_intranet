@@ -135,8 +135,9 @@ class ProjectListView(View):
         post = Project.objects.get(id = project_id)
         #project_id는 하나이니까 filter아니고 get 
 
-        if post.created_by == int(employee_id) :
-            post.update(
+        if post.created_by_id == int(employee_id) :
+            Project.objects.update(
+            #post.update(
                 title = data['title'],
                 description = data['description'],
                 is_private = data['is_private'],
@@ -160,15 +161,15 @@ class ProjectListView(View):
 
 
 # 테스트중
-            update_project = Project.objects.update(
-                # 수정은 작성한 사람만 할 수 있으므로 created_by_id 받을 필요 없음.
-                #created_by = Employee.objects.get(id=employee_id),
-                title = data['title'],
-                description = data['description'],
-                is_private = data['is_private'],
-                start_date = data['start_date'],
-                end_date = data['end_date']
-            )
+#            update_project = Project.objects.update(
+#                # 수정은 작성한 사람만 할 수 있으므로 created_by_id 받을 필요 없음.
+#                #created_by = Employee.objects.get(id=employee_id),
+#                title = data['title'],
+#                description = data['description'],
+#                is_private = data['is_private'],
+#                start_date = data['start_date'],
+#                end_date = data['end_date']
+#            )
 
             return JsonResponse({'MESSAGE' : 'UPDATE_SUCCESS'}, status = 200)
 

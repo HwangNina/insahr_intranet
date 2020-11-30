@@ -103,8 +103,26 @@ class ProjectListView(View):
                     employee = Employee.objects.get(id=person),
                     project = Project.objects.get(id=new_project.id)
                 )
-            return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
 
+            projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
+
+            project_list = [{
+            'id' : project.id,
+            'title' : project.title,
+            'description' : project.description,
+            'start_date' : project.start_date.date(),
+            'end_date' : project.end_date.date(),
+            'is_private' : project.is_private,
+            'participants': len([par.employee for par in project.projectparticipant_set.all()])
+            } for project in projects]
+
+            if ProjectLike.objects.filter(employee_id = employee_id).exists() :
+                likes = ProjectLike.objects.filter(employee_id = employee_id)
+                like_list = [like_project.project_id for like_project in likes]
+                return JsonResponse({'main_list' : project_list, 'like_project_list' : like_list}, status=200)
+
+            return JsonResponse({'main_list' : project_list}, status=200)
+ 
         except KeyError as e :
             return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
 
@@ -112,6 +130,8 @@ class ProjectListView(View):
             return JsonResponse({'MESSAGE': f'VALUE_ERROR:{e}'}, status=400)
 
     def get(self,request):
+        offset = int(request.GET.get("offset", "0"))
+        limit = int(request.GET.get("limit", "5"))
         projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
         employee_id = 1 #request.employee
 
@@ -123,7 +143,7 @@ class ProjectListView(View):
             'end_date' : project.end_date.date(),
             'is_private' : project.is_private,
             'participants': len([par.employee for par in project.projectparticipant_set.all()])
-        } for project in projects]
+        } for project in projects][offset:offset+limit]
 
         if ProjectLike.objects.filter(employee_id = employee_id).exists() :
             likes = ProjectLike.objects.filter(employee_id = employee_id)
@@ -205,7 +225,7 @@ class ThreadView(View):
         employee_id = request.employee
         employee_name = Employee.objects.get(id = employee_id).name
 
-        if ProjectParticipants.objects.filter(employee_id = employee_id and project_id = project_id).exists() :
+        if ProjectParticipants.objects.filter(employee_id = employee_id,project_id = project_id).exists() :
             ProjectDetail.objects.create(
                 writer = employee_name,
                 content = data['content'],

@@ -205,7 +205,7 @@ class ThreadView(View):
         employee_id = request.employee
         employee_name = Employee.objects.get(id = employee_id).name
 
-        if ProjectParticipants.objects.filter(employee_id = employee_id).exists() :
+        if ProjectParticipants.objects.filter(employee_id = employee_id and project_id = project_id).exists() :
             ProjectDetail.objects.create(
                 writer = employee_name,
                 content = data['content'],

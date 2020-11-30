@@ -3,6 +3,7 @@ import boto3
 import datetime
 import uuid
 import jwt_utils
+import my_settings
 
 from functools        import reduce
 from operator         import __or__ as OR
@@ -31,6 +32,7 @@ class NoticeListView(View):
     def get(self, request):
         try:
             limit = 5
+            total_notice = len(Notice.objects.all())
 
             queries = dict(request.GET)
 
@@ -43,14 +45,14 @@ class NoticeListView(View):
             if queries.get('search'):
                 conditions = []
                 search_list = queries.get('search')[0].split(' ')
-                for s in search_list:
-                    conditions.append(Q(title__icontains = s))
+                for word in search_list:
+                    conditions.append(Q(title__icontains = word))
                 notice_list = Notice.objects.filter(reduce(OR, conditions))
 
             else:
                 notice_list = Notice.objects.all()
 
-            if offset > len(notice_list):
+            if offset > total_notice:
                 return JsonResponse(
                     {
                     'message':'OFFSET_OUT_OF_RANGE'
@@ -67,29 +69,31 @@ class NoticeListView(View):
                 } for notice in notice_page_list
             ]
 
-            return JsonResponse({"notices":returning_list}, status=200)
+            return JsonResponse({"notices":returning_list,"total_notices":total_notice}, status=200)
 
         except ValueError as e:
             return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)   
 
 
 class NoticeDetailView(View):
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=my_settings.AWS_ACCESS_KEY['MY_AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key=my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY']
+    )
     @jwt_utils.signin_decorator
     def post(self, request):
         try:
+            data = eval(request.POST['data'])
             employee_id = request.employee.id
-            data        = json.loads(request.body)
         
             attachment_list = []
-            if request.FILES.get('attachment', None):
-                attachments = request.FILES['attachment']
-
-                for file in attachments:
+            if request.FILES.getlist('attachment', None):
+                for file in request.FILES.getlist('attachment'): 
                     filename = str(uuid.uuid1()).replace('-','')
-                
                     self.s3_client.upload_fileobj(
-                        attachment,
-                        "insahr_notice_attachment",
+                        file,
+                        "thisisninasbucket",
                         filename,
                         ExtraArgs={
                             "ContentType": file.content_type
@@ -108,7 +112,7 @@ class NoticeDetailView(View):
 
             for file in attachment_list:
                 NoticeAttachment.objects.create(
-                    notice = new_notice.id,
+                    notice = Notice.objects.get(id = new_notice.id),
                     file   = file_url
                 )
             
@@ -119,7 +123,7 @@ class NoticeDetailView(View):
                     'content':new_notice.content,
                     'created_at':new_notice.created_at
                 },
-                'attachments': attachment_list
+                'attachments':[{'id':f.id, 'file':f.file} for f in target_schedule.scheduleattachment_set.all()]
                 }, 
                 status=201)
 
@@ -167,26 +171,27 @@ class NoticeDetailView(View):
     @jwt_utils.signin_decorator
     def patch(self, request, notice_id):
         try:
+            data = eval(request.POST['data'])
             employee_id   = request.employee.id
             employee_auth = request.employee.auth
 
-            target_notice = Notice.objects.get(id = notice_id)
-            data          = json.loads(request.body)
-
-            NoticeAttachment.objects.filter(notice_id = target_notice.id).delete()
+            target_notice = Notice.objects.prefech_related('noticeattachment_set').filter(id = notice_id)
 
             if target_notice.author.id != employee_id and employee_auth != 1:
                 return JsonResponse({"message": "ACCESS_DENIED"},status=403)
 
-            attachment_list = []
-            if request.FILES.get('attachment'):
-                attachments = request.FILES['attachment']
+            if 'deleting_files' in data:
+                for file in data['deleting_files']:
+                    if file in [f.id for f in target_notice.noticeattachment_set.all()]:
+                        NoticeAttachment.objects.filter(id = file).delete()
 
-                for file in attachments:
+            attachment_list = []
+            if request.FILES.getlist('attachment', None):
+                for file in request.FILES.getlist('attachment'): 
                     filename = str(uuid.uuid1()).replace('-','')
                     self.s3_client.upload_fileobj(
-                        attachment,
-                        "insahr_notice_attachment",
+                        file,
+                        "thisisninasbucket",
                         filename,
                         ExtraArgs={
                             "ContentType": file.content_type
@@ -194,7 +199,6 @@ class NoticeDetailView(View):
                     )
                     file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
                     attachment_list.append(file_url)
-
             else:
                 file_url = None
             
@@ -204,13 +208,11 @@ class NoticeDetailView(View):
                     file   = file_url
                 )
 
-            if 'title' in data:
-                target_notice.title = data['title']
+            notice_field_list = [field.name for field in Notice._meta.get_fields()]
 
-            if 'content' in data:
-                target_notice.content = data['content']
-
-            target_notice.save()
+            for key in data.keys():
+                if key in notice_field_list:
+                    target_notice.update(**{key : data[key]})
 
             return JsonResponse(
                 {
@@ -221,7 +223,7 @@ class NoticeDetailView(View):
                 },
                 'attachments': attachment_list
                 }, 
-                status=201)
+                status=200)
 
         except KeyError as e :
             return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)

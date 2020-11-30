@@ -103,7 +103,7 @@ class HumanResourceManagementView(View):
             if target_employee[decryption_needed[idx]]:
                 decryption_needed[idx] = decryption(decryption_needed[idx])
             else:
-                decryption_needed[idx] = ""
+                decryption_needed[idx] = None
 
         return JsonResponse(
             {'all_auth':{
@@ -165,11 +165,11 @@ class HumanResourceManagementView(View):
             employee_detail_field_list = [field.name for field in EmployeeDetail._meta.get_fields()]
             
             for field in employee_field_list:
-                if field in data:
-                    if field == (rrn or bank_account or passport_num):
-                        target_employee.update(**{field : encrypt_utils.encrypt(data[field], my_settings.SECRET.get('random'))})
-                    else:
-                        target_employee.update(**{field : data[field]})
+                    if field in data:
+                        if field in ['rrn', 'bank_account', 'passport_num']:
+                            Employee.objects.filter(id = employee_id).update(**{field : encrypt_utils.encrypt(data[field], my_settings.SECRET.get('random')).decode('utf-8')})
+                        else:
+                            Employee.objects.filter(id = employee_id).update(**{field : data[field]})
 
             for field in employee_detail_field_list:
                 if field in data:

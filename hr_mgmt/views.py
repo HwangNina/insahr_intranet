@@ -12,7 +12,7 @@ from django.http     import JsonResponse
 from django.views    import View
 
 from employee.models import Auth, Employee
-from hr_mgmt.models import EmployeeDetail
+from hr_mgmt.models  import EmployeeDetail
 
 # Create your views here.
 class HumanResourceListView(View):
@@ -72,7 +72,8 @@ class HumanResourceListView(View):
                     'joined_at':hr.joined_at
                 } for hr in hr_mgmt_page_list
             ]
-            return JsonResponse({"employees":returning_list}, status=200)
+
+            return JsonResponse({"employees":returning_list, "total_employees":len(employee_list)}, status=200)
 
         except ValueError as e:
             return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)         
@@ -123,7 +124,7 @@ class HumanResourceManagementView(View):
                 'detailed_address' : target_employee['detailed_address'] 
                 },
             'admin_only':{
-                'auth'             : target_employdd['auth']
+                'auth'             : target_employee['auth']
                 'joined_at'        : target_employee_detail.joined_at,
                 'probation_period' : target_employee_detail.probation_period,
                 'worked_since'     : target_employee_detail.worked_since,
@@ -151,7 +152,7 @@ class HumanResourceManagementView(View):
                     status=403
                 )
 
-            target_employee = Employee.objects.prefetch_related('employeedetail_set').filter(id = employee_id).values()[0]
+            target_employee = Employee.objects.prefetch_related('employeedetail_set').filter(id = employee_id)
             target_employee_detail = target_employee.employeedetail_set.all()[0]
 
             regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
@@ -163,18 +164,24 @@ class HumanResourceManagementView(View):
             employee_field_list = [field.name for field in Employee._meta.get_fields()]
             employee_field_list.remove('password')
             employee_detail_field_list = [field.name for field in EmployeeDetail._meta.get_fields()]
+            employee_detail_field_list.remove('auth')
             
             for field in employee_field_list:
                     if field in data:
                         if field in ['rrn', 'bank_account', 'passport_num']:
-                            Employee.objects.filter(id = employee_id).update(**{field : encrypt_utils.encrypt(data[field], my_settings.SECRET.get('random')).decode('utf-8')})
+                            target_employee.update(**{field : encrypt_utils.encrypt(data[field], my_settings.SECRET.get('random')).decode('utf-8')})
                         else:
-                            Employee.objects.filter(id = employee_id).update(**{field : data[field]})
+                            target_employee.update(**{field : data[field]})
 
             for field in employee_detail_field_list:
                 if field in data:
                     target_employee.update(**{field : data[field]})
+
+            if 'auth' in data:
+                target_employee.update(auth = Auth.objects.get(id = data['auth']))
+
             return JsonResponse({"message": "MODIFICATION_SUCCESS"}, status=200)
+
 
         except KeyError as e :
             return JsonResponse({'message': f'KEY_ERROR:{e}'}, status=400)

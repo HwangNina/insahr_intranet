@@ -3,6 +3,7 @@ import boto3
 import jwt_utils
 import uuid
 import my_settings
+from django.conf import settings
 
 from django.views     import View
 from django.http      import JsonResponse
@@ -48,15 +49,14 @@ class ScheduleListView(View):
 class ScheduleDetailView(View):
     s3_client = boto3.client(
         's3',
-        aws_access_key_id=my_settings.AWS_ACCESS_KEY['MY_AWS_ACCESS_KEY_ID'],
-        aws_secret_access_key=my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY']
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
     )
-    # @jwt_utils.signin_decorator
+    @jwt_utils.signin_decorator
     def post(self, request):
         try:
             data = eval(request.POST['data'])
-            # employee_id = request.employee.id
-            employee_id = 3
+            employee_id = request.employee.id
 
             if len(data['participants']) == 0:
                 participant_list = Employee.objects.all().values()
@@ -75,7 +75,7 @@ class ScheduleDetailView(View):
                             "ContentType": file.content_type
                         }
                     )
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/schedule/{filename}"
                     attachment_list.append(file_url)
             else:
                 file_url = None
@@ -166,7 +166,7 @@ class ScheduleDetailView(View):
                             "ContentType": file.content_type
                         }
                     )
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/schedule/{filename}"
                     attachment_list.append(file_url)
             else:
                 file_url = None

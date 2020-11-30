@@ -1,7 +1,7 @@
 import json
 import boto3
-import datetime
 import uuid
+import datetime
 import jwt_utils
 import my_settings
 
@@ -99,7 +99,7 @@ class NoticeDetailView(View):
                             "ContentType": file.content_type
                         }
                     )
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/notice/{filename}"
                     attachment_list.append(file_url)
             else:
                 file_url = None
@@ -197,7 +197,7 @@ class NoticeDetailView(View):
                             "ContentType": file.content_type
                         }
                     )
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/notice/{filename}"
                     attachment_list.append(file_url)
             else:
                 file_url = None

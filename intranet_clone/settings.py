@@ -59,6 +59,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'intranet_clone.middleware.PutParsingMiddleware',
+    'intranet_clone.middleware.JSONParsingMiddleware'
 ]
 
 ROOT_URLCONF = 'intranet_clone.urls'

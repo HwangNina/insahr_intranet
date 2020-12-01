@@ -24,11 +24,11 @@ class NoticeMainView(View):
                             'date':notice['created_at']} for notice in recent_three[::-1]]
 
         return JsonResponse(
-            {"returning_notices" : returning_object}, status=200
-        )
+            {"returning_notices" : returning_object}, status=200)
+            
 
 class NoticeListView(View):
-    
+
     def get(self, request):
         try:
             limit = 5
@@ -54,22 +54,15 @@ class NoticeListView(View):
 
             if offset > total_notice:
                 return JsonResponse(
-                    {
-                    'message':'OFFSET_OUT_OF_RANGE'
-                    },
-                    status=400)
+                    {'message':'OFFSET_OUT_OF_RANGE'},status=400)
 
-            notice_page_list = [notice for notice in notice_list][offset:offset+limit]
-
-            returning_list = [
-                {
+            notice_page_list = [{
                 'no': notice.id,
                 'title': notice.title,
                 'date': notice.created_at
-                } for notice in notice_page_list
-            ]
+                } for notice in notice_list][offset:offset+limit]
 
-            return JsonResponse({"notices":returning_list,"total_notices":total_notice}, status=200)
+            return JsonResponse({"notices":notice_page_list,"total_notices":len(notice_list)}, status=200)
 
         except ValueError as e:
             return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)   
@@ -81,11 +74,12 @@ class NoticeDetailView(View):
         aws_access_key_id=my_settings.AWS_ACCESS_KEY['MY_AWS_ACCESS_KEY_ID'],
         aws_secret_access_key=my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY']
     )
-    @jwt_utils.signin_decorator
+    # @jwt_utils.signin_decorator
     def post(self, request):
         try:
             data = eval(request.POST['data'])
-            employee_id = request.employee.id
+            # employee_id = request.employee.id
+            employee_id = 4
         
             attachment_list = []
             if request.FILES.getlist('attachment', None):
@@ -99,7 +93,7 @@ class NoticeDetailView(View):
                             "ContentType": file.content_type
                         }
                     )
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/notice/{filename}"
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
                     attachment_list.append(file_url)
             else:
                 file_url = None
@@ -110,7 +104,7 @@ class NoticeDetailView(View):
                         author    = Employee.objects.get(id = employee_id),
                         )
 
-            for file in attachment_list:
+            for file_url in attachment_list:
                 NoticeAttachment.objects.create(
                     notice = Notice.objects.get(id = new_notice.id),
                     file   = file_url
@@ -123,7 +117,7 @@ class NoticeDetailView(View):
                     'content':new_notice.content,
                     'created_at':new_notice.created_at
                 },
-                'attachments':[{'id':f.id, 'file':f.file} for f in target_schedule.scheduleattachment_set.all()]
+                'attachments':[{'id':f.id, 'file':f.file} for f in NoticeAttachment.objects.filter(notice_id=new_notice.id)]
                 }, 
                 status=201)
 
@@ -175,7 +169,7 @@ class NoticeDetailView(View):
             employee_id   = request.employee.id
             employee_auth = request.employee.auth
 
-            target_notice = Notice.objects.prefech_related('noticeattachment_set').filter(id = notice_id)
+            target_notice = Notice.objects.prefetch_related('noticeattachment_set').filter(id = notice_id)
 
             if target_notice.author.id != employee_id and employee_auth != 1:
                 return JsonResponse({"message": "ACCESS_DENIED"},status=403)
@@ -197,12 +191,12 @@ class NoticeDetailView(View):
                             "ContentType": file.content_type
                         }
                     )
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/notice/{filename}"
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
                     attachment_list.append(file_url)
             else:
                 file_url = None
             
-            for file in attachment_list:
+            for file_url in attachment_list:
                 NoticeAttachment.objects.create(
                     notice = target_notice.id,
                     file   = file_url

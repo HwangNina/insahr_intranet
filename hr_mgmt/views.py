@@ -12,7 +12,7 @@ from django.http     import JsonResponse
 from django.views    import View
 
 from employee.models import Auth, Employee
-from hr_mgmt.models  import EmployeeDetail
+from hr_mgmt.models import EmployeeDetail
 
 # Create your views here.
 class HumanResourceListView(View):
@@ -37,11 +37,6 @@ class HumanResourceListView(View):
                     status=403
                 )
 
-            queries = dict(request.GET)
-
-            if queries.get('offset'):
-                offset = int(queries['offset'][0])
-
             if queries.get('search'):
                 conditions = []
                 search_list = queries.get('search')[0].split(' ')
@@ -53,11 +48,7 @@ class HumanResourceListView(View):
 
             if offset > len(employee_list):
                 return JsonRespose(
-                    {
-                        'message':'OFFSET_OUT_OF_RANGE'
-                    },
-                    status=400
-                )
+                    {'message':'OFFSET_OUT_OF_RANGE'},status=400)
             
             hr_mgmt_page_list = [hr for hr in employee_list][offset:offset+limit]
 
@@ -72,8 +63,7 @@ class HumanResourceListView(View):
                     'joined_at':hr.joined_at
                 } for hr in hr_mgmt_page_list
             ]
-
-            return JsonResponse({"employees":returning_list, "total_employees":len(employee_list)}, status=200)
+            return JsonResponse({"employees":returning_list}, status=200)
 
         except ValueError as e:
             return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)         
@@ -85,10 +75,7 @@ class HumanResourceManagementView(View):
         admin_auth = request.employee.auth
 
         if admin_auth != 1:
-            return JsonResponse(
-                {"message": "NO_AUTHORIZATION"},
-                status=403
-            )
+            return JsonResponse({"message": "NO_AUTHORIZATION"},status=403)
 
         target_employee = Employee.objects.prefetch_related('employeedetail_set').filter(id = employee_id).values()[0]
         target_employee_detail = target_employee.employeedetail_set.all()[0]
@@ -124,7 +111,7 @@ class HumanResourceManagementView(View):
                 'detailed_address' : target_employee['detailed_address'] 
                 },
             'admin_only':{
-                'auth'             : target_employee['auth']
+                'auth'             : target_employdd['auth']
                 'joined_at'        : target_employee_detail.joined_at,
                 'probation_period' : target_employee_detail.probation_period,
                 'worked_since'     : target_employee_detail.worked_since,
@@ -152,7 +139,7 @@ class HumanResourceManagementView(View):
                     status=403
                 )
 
-            target_employee = Employee.objects.prefetch_related('employeedetail_set').filter(id = employee_id)
+            target_employee = Employee.objects.prefetch_related('employeedetail_set').filter(id = employee_id).values()[0]
             target_employee_detail = target_employee.employeedetail_set.all()[0]
 
             regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
@@ -164,24 +151,18 @@ class HumanResourceManagementView(View):
             employee_field_list = [field.name for field in Employee._meta.get_fields()]
             employee_field_list.remove('password')
             employee_detail_field_list = [field.name for field in EmployeeDetail._meta.get_fields()]
-            employee_detail_field_list.remove('auth')
             
             for field in employee_field_list:
                     if field in data:
                         if field in ['rrn', 'bank_account', 'passport_num']:
-                            target_employee.update(**{field : encrypt_utils.encrypt(data[field], my_settings.SECRET.get('random')).decode('utf-8')})
+                            Employee.objects.filter(id = employee_id).update(**{field : encrypt_utils.encrypt(data[field], my_settings.SECRET.get('random')).decode('utf-8')})
                         else:
-                            target_employee.update(**{field : data[field]})
+                            Employee.objects.filter(id = employee_id).update(**{field : data[field]})
 
             for field in employee_detail_field_list:
                 if field in data:
                     target_employee.update(**{field : data[field]})
-
-            if 'auth' in data:
-                target_employee.update(auth = Auth.objects.get(id = data['auth']))
-
             return JsonResponse({"message": "MODIFICATION_SUCCESS"}, status=200)
-
 
         except KeyError as e :
             return JsonResponse({'message': f'KEY_ERROR:{e}'}, status=400)

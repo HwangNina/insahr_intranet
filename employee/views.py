@@ -94,10 +94,9 @@ class SignInView(View):
 
 
 class EmployeeInfoView(View):
-    # @jwt_utils.signin_decorator    
+    @jwt_utils.signin_decorator    
     def get(self, request):
-        # employee_id     = request.employee.id
-        employee_id = 3
+        employee_id     = request.employee.id
         target_employee = Employee.objects.filter(id = employee_id).values()[0]
 
         def decryption(info):
@@ -136,9 +135,9 @@ class EmployeeInfoView(View):
     # @jwt_utils.signin_decorator
     def patch(self, request):
         try:
-            data     = json.loads(request.body)
+            data        = json.loads(request.body)
             # employee_id = request.employee.id
-            employee_id = 3
+            employee_id = 4
 
             target_employee = Employee.objects.get(id = employee_id)
 
@@ -150,9 +149,10 @@ class EmployeeInfoView(View):
             if bcrypt.checkpw(data['password'].encode('UTF-8'), target_employee.password.encode('UTF-8')):
                 if 'new_password' in data:
                     new_password       = data['new_password'].encode('utf-8')
-                    new_password_crypt = bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8')
+                    new_password_crypt = bcrypt.hashpw(new_password, bcrypt.gensalt()).decode('utf-8')
                     
-                    target_employee.password = new_password
+                    target_employee.password = new_password_crypt
+                    target_employee.save()
 
                 employee_field_list = [field.name for field in Employee._meta.get_fields()]
                 employee_field_list.remove('password')
@@ -175,6 +175,7 @@ class EmployeeInfoView(View):
         except ValueError as e:
             return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)
 
+
 class ProfileImageView(View):
     s3_client = boto3.client(
         's3',
@@ -182,27 +183,30 @@ class ProfileImageView(View):
         aws_secret_access_key=my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY']
     )
     # @jwt_utils.signin_decorator
-    def patch(self, request):
+    def post(self, request):
         try:
             # employee_id = request.employee.id
-            employee_id = 3
+            employee_id = 4
     
-            if request.FILES.get('attachment', None):
+            if request.FILES.get('attachment'):
+                print('hi!')
+                file = request.FILES.get('attachment')
                 filename = str(uuid.uuid1()).replace('-','')
                 self.s3_client.upload_fileobj(
                     file,
-                    'thisisninasbucket',
+                    "thisisninasbucket",
                     filename,
                     ExtraArgs={
                         'ContentType':file.content_type
                     }
                 )
-                file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/profile-image/{filename}"
+                file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
             
             else:
                 file_url = None
             
-            target_employee = Employee.objects.get(id = employee_id)
+            target_employee               = Employee.objects.get(id = employee_id)
+            print(file_url)
             target_employee.profile_image = file_url
             target_employee.save()
 
@@ -217,9 +221,9 @@ class ProfileImageView(View):
     # @jwt_utils.signin_decorator
     def delete(self, request):
         # employee_id = request.employee.id
-        employee_id = 3
+        employee_id = 4
 
-        target_employee = Employee.objects.get(id = employee_id)
+        target_employee               = Employee.objects.get(id = employee_id)
         target_employee.profile_image = 'https://freepikpsd.com/wp-content/uploads/2019/10/default-profile-image-png-1-Transparent-Images.png'
         target_employee.save()
 

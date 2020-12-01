@@ -25,7 +25,7 @@ class Schedule(models.Model):
     amended_by  = models.ForeignKey(Employee, on_delete=models.DO_NOTHING, related_name='schedule_amended_employee')
     created_at  = models.DateField(auto_now=True, auto_now_add=False)
     updated_at  = models.DateField(auto_now=False, auto_now_add=True)
-    participant = models.ManyToManyField(Employee, through = 'ScheduleParticipant', related_name='schedule_employee')
+    participant = models.ManyToManyField(Employee, through = 'ScheduleParticipant')
 
     def __str__(self):
         return self.title
@@ -35,7 +35,7 @@ class Schedule(models.Model):
 
 
 class ScheduleParticipant(models.Model):
-    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
+    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE, related_name='participants')
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
 
     class Meta():

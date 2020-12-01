@@ -3,8 +3,8 @@ import boto3
 import jwt_utils
 import uuid
 import my_settings
-from django.conf import settings
 
+from django.conf      import settings
 from django.views     import View
 from django.http      import JsonResponse
 from django.db.models import Q
@@ -24,26 +24,36 @@ from employee.models import Auth, Employee
 class ScheduleListView(View):
     @jwt_utils.signin_decorator
     def get(self, request):
-        data  = json.loads(request.body)
+        try:
+            data  = json.loads(request.body)
 
-        schedule_list = list(Schedule.objects.filter((
-            Q(begin_at__year = data['year']) & Q(begin_at__month = data['month'])) or (
-            Q(finish_at__year = data['year']) & Q(finish_at__month = data['month']))
-            )).order_by('begin_at')
-    
-        returning_list = [{
-            "begin_at":schedule.begin_at,
-            "finish_at":schedule.finish_at,
-            "label":schedule.label,
-            "title":schedule.title,
-        } for schedule in schedule_list]
+            schedule_list = list(Schedule.objects.filter((
+                Q(begin_at__year = data['year']) & Q(begin_at__month = data['month'])) | ((
+                Q(finish_at__year = data['year']) & Q(finish_at__month = data['month'])))
+                ).order_by('begin_at'))
 
-        return JsonResponse(
-            {
-                "schedule": returning_list
-            },
-            status=200
-        )
+            returning_list = [{
+                "label":schedule.label_id,
+                "title":schedule.title,
+                "location": schedule.location,
+                "begin_at":schedule.begin_at,
+                "finish_at":schedule.finish_at,
+                "description":schedule.description,
+                "written_by":str(schedule.written_by),
+                "amended_by":str(schedule.amended_by),
+                "created_at":schedule.created_at,
+                "updated_at":schedule.updated_at,
+                "participants":[Employee.objects.get(id = schedule.employee_id).id for schedule in ScheduleParticipant.objects.filter(schedule_id = schedule.id)],
+                "attachment":[{'id':f.id, 'file':f.file} for f in ScheduleAttachment.objects.filter(schedule_id = schedule.id)],
+            } for schedule in schedule_list]
+
+            return JsonResponse({"schedule":returning_list},status=200)
+
+        except KeyError as e :
+            return JsonResponse({'message': f'KEY_ERROR:{e}'}, status=400)
+
+        except ValueError as e:
+            return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)
 
 
 class ScheduleDetailView(View):
@@ -52,14 +62,15 @@ class ScheduleDetailView(View):
         aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
     )
-    @jwt_utils.signin_decorator
+    # @jwt_utils.signin_decorator
     def post(self, request):
         try:
             data = eval(request.POST['data'])
-            employee_id = request.employee.id
+            # employee_id = request.employee.id
+            employee_id=4
 
             if len(data['participants']) == 0:
-                participant_list = Employee.objects.all().values()
+                participant_list = [p.id for p in Employee.objects.all()]
             else:
                 participant_list = data['participants']
 
@@ -75,7 +86,7 @@ class ScheduleDetailView(View):
                             "ContentType": file.content_type
                         }
                     )
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/schedule/{filename}"
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
                     attachment_list.append(file_url)
             else:
                 file_url = None
@@ -93,7 +104,7 @@ class ScheduleDetailView(View):
                 amended_by  = created_by,
             )
 
-            for file in attachment_list:
+            for file_url in attachment_list:
                 ScheduleAttachment.objects.create(
                     schedule = Schedule.objects.get(id = new_schedule.id),
                     file     = file_url
@@ -113,29 +124,6 @@ class ScheduleDetailView(View):
         except ValueError as e:
             return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)
 
-    # @jwt_utils.signin_decorator
-    def get(self, request, schedule_id):
-        target_schedule = Schedule.objects.select_related('label'
-                          ).prefetch_related('scheduleparticipant_set__employee','scheduleattachment_set'
-                          ).get(id = schedule_id)
-
-        return JsonResponse(
-            {
-                'schedule':{'label': target_schedule.label.name,
-                'title': target_schedule.title,
-                'location': target_schedule.location,
-                'begin_at': target_schedule.begin_at,
-                'finish_at': target_schedule.finish_at,
-                'description': target_schedule.description,
-                'written_by': str(target_schedule.written_by),
-                'amended_by': str(target_schedule.amended_by),
-                'craeted_at': target_schedule.created_at,
-                'updated_at': target_schedule.updated_at},
-                'participants': [participant.employee.name_kor for participant in target_schedule.scheduleparticipant_set.all()],
-                'attachments':[{'id':f.id, 'file':f.file} for f in target_schedule.scheduleattachment_set.all()]
-            },
-            status=200
-        )
     
     @jwt_utils.signin_decorator
     def patch(self, request, schedule_id):
@@ -144,7 +132,7 @@ class ScheduleDetailView(View):
             employee_id     = request.employee.id
             employee_auth   = request.employee.auth
 
-            target_schedule = Schedule.objects.select_related('label').prefech_related('scheduleattachment_set').filter(id = schedule_id)
+            target_schedule = Schedule.objects.select_related('label').prefetch_related('scheduleattachment_set').filter(id = schedule_id)
 
             if employee_id != target_schedule.values()[0]['written_by_id'] and employee_auth != 1:
                 return JsonResponse({"message": "ACCESS_DENIED"},status=403)
@@ -166,7 +154,7 @@ class ScheduleDetailView(View):
                             "ContentType": file.content_type
                         }
                     )
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/schedule/{filename}"
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
                     attachment_list.append(file_url)
             else:
                 file_url = None
@@ -179,7 +167,7 @@ class ScheduleDetailView(View):
 
             target_schedule.update(updated_at = datetime.datetime.now().strftime("%Y-%m-%d"))
 
-            for file in attachment_list:
+            for file_url in attachment_list:
                 NoticeAttachment.objects.create(
                     notice = Notice.objects.get(id = target_schedule['id']),
                     file   = file_url

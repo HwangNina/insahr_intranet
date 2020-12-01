@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'employee',
     'notice',
     'project',
-    'schedule'
+    'schedule',
+    'hr_mgmt'
 ]
 
 MIDDLEWARE = [

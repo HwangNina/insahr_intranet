@@ -14,6 +14,7 @@ from django.http     import JsonResponse
 from django.views    import View
 
 from employee.models import Auth, Employee
+from hr_mgmt.models import EmployeeDetail
 
 
 # Create your views here.
@@ -42,7 +43,7 @@ class SignUpView(View):
                     additional_infos[index] = None
 
             # insert record
-            Employee(
+            new_employee = Employee(
                 auth              = Auth.objects.get(id = 5),
                 account           = data['account'],
                 password          = password_crypt,
@@ -54,6 +55,10 @@ class SignUpView(View):
                 address           = additional_infos[1],
                 detailed_address  = additional_infos[2],
                 profile_image     = 'https://freepikpsd.com/wp-content/uploads/2019/10/default-profile-image-png-1-Transparent-Images.png'
+            )
+            new_employee.save()
+            EmployeeDetail(
+                employee = Employee.objects.get(id = new_employee.id)
             ).save()
             
             return JsonResponse({"message": "SIGNUP_SUCCESS"}, status=200)
@@ -94,9 +99,10 @@ class SignInView(View):
 
 
 class EmployeeInfoView(View):
-    @jwt_utils.signin_decorator    
+    # @jwt_utils.signin_decorator    
     def get(self, request):
-        employee_id     = request.employee.id
+        # employee_id     = request.employee.id
+        employee_id = 4
         target_employee = Employee.objects.filter(id = employee_id).values()[0]
 
         def decryption(info):
@@ -132,12 +138,11 @@ class EmployeeInfoView(View):
             }
         )
 
-    # @jwt_utils.signin_decorator
+    @jwt_utils.signin_decorator
     def patch(self, request):
         try:
             data        = json.loads(request.body)
-            # employee_id = request.employee.id
-            employee_id = 4
+            employee_id = request.employee.id
 
             target_employee = Employee.objects.get(id = employee_id)
 
@@ -146,6 +151,7 @@ class EmployeeInfoView(View):
                 or 'personal_email' in data and not (re.search(regex, data['personal_email']))):
                 return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
 
+            # if given password is incorrect, the user is not allowed to modify the information
             if bcrypt.checkpw(data['password'].encode('UTF-8'), target_employee.password.encode('UTF-8')):
                 if 'new_password' in data:
                     new_password       = data['new_password'].encode('utf-8')
@@ -155,7 +161,7 @@ class EmployeeInfoView(View):
                     target_employee.save()
 
                 employee_field_list = [field.name for field in Employee._meta.get_fields()]
-                employee_field_list.remove('password')
+                employee_field_list.remove('password') # since password has been updated already
 
                 for field in employee_field_list:
                     if field in data:
@@ -164,7 +170,36 @@ class EmployeeInfoView(View):
                         else:
                             Employee.objects.filter(id = employee_id).update(**{field : data[field]})
 
-                return JsonResponse({"message": "MODIFICATION_SUCCESS"}, status=200)
+                def decryption(info):
+                    return encrypt_utils.decrypt(
+                                  target_employee[info], my_settings.SECRET.get('random')
+                                  ).decode('utf-8')
+
+                decryption_needed = ['rrn', 'bank_account', 'passport_num']
+
+                for idx in range(0, len(decryption_needed)):
+                    if target_employee[decryption_needed[idx]]:
+                        decryption_needed[idx] = decryption(decryption_needed[idx])
+                    else:
+                        decryption_needed[idx] = None
+
+                return JsonResponse({"new_information": {
+                    'account'           : target_employee['account'],
+                    'name_kor'          : target_employee['name_kor'],
+                    'name_eng'          : target_employee['name_eng'],
+                    'nickname'          : target_employee['nickname'],
+                    'rrn'               : decryption_needed[0],
+                    'mobile'            : target_employee['mobile'],
+                    'emergency_num'     : target_employee['emergency_num'],
+                    'company_email'     : target_employee['company_email'],
+                    'personal_email'    : target_employee['personal_email'],
+                    'bank_name'         : target_employee['bank_name'],
+                    'bank_account'      : decryption_needed[1],
+                    'passport_num'      : decryption_needed[2],
+                    'post_num'          : target_employee['post_num'],
+                    'address'           : target_employee['address'],
+                    'detailed_address'  : target_employee['detailed_address'] 
+                }}, status=200)
 
             else:
                 return JsonResponse({'message': "WRONG_PASSWORD"}, status=400)
@@ -183,14 +218,15 @@ class ProfileImageView(View):
         aws_secret_access_key=my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY']
     )
     # @jwt_utils.signin_decorator
-    def post(self, request):
+    def patch(self, request):
         try:
             # employee_id = request.employee.id
             employee_id = 4
+
+            print(request.FILES['attachment'])
     
-            if request.FILES.get('attachment'):
-                print('hi!')
-                file = request.FILES.get('attachment')
+            if request.FILES['attachment']:
+                file = request.FILES['attachment']
                 filename = str(uuid.uuid1()).replace('-','')
                 self.s3_client.upload_fileobj(
                     file,
@@ -205,12 +241,11 @@ class ProfileImageView(View):
             else:
                 file_url = None
             
-            target_employee               = Employee.objects.get(id = employee_id)
-            print(file_url)
+            target_employee = Employee.objects.get(id = employee_id)
             target_employee.profile_image = file_url
             target_employee.save()
 
-            return JsonResponse({'message': 'MODIFIACTION_SUCCESS'}, status=200)
+            return JsonResponse({'new_profile_image': file_url}, status=200)
 
         except KeyError as e :
             return JsonResponse({'message': f'KEY_ERROR:{e}'}, status=400)

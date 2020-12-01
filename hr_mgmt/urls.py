@@ -1,7 +1,7 @@
 from django.urls import path
-from employee.views import SignUpView, SignInView, EmployeeInfoView
+from hr_mgmt.views import HumanResourceListView, HumanResourceManagementView
 
 urlpatterns = [
-    path('/hr/list', HumanResourceListView.as_view()),
-    path('/hr/management',HumanResourceManagementView.as_view())
+    path('/list', HumanResourceListView.as_view()),
+    path('/management/<int:employee_id>',HumanResourceManagementView.as_view())
 ]

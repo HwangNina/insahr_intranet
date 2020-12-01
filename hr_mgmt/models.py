@@ -11,7 +11,7 @@ class EmployeeDetail(models.Model):
     worked_since     = models.DateField(auto_now=False, auto_now_add=False, null=True)
     total_experience = models.CharField(max_length=50, null=True)
     annual_vacation  = models.IntegerField(null=True)
-    annual_vacation_permission = models.ForeignKey('Employee', null=True, on_delete=models.SET_NULL, related_name='employee')
+    annual_vacation_permission = models.ForeignKey(Employee, null=True, on_delete=models.SET_NULL, related_name='employee')
     status           = models.CharField(max_length=50, null=True)
     promotion_date   = models.DateField(auto_now=False, auto_now_add=False, null=True)
     promoted_at      = models.DateField(auto_now=False, auto_now_add=False, null=True)

@@ -12,15 +12,17 @@ from django.http     import JsonResponse
 from django.views    import View
 
 from employee.models import Auth, Employee
-from hr_mgmt.models  import EmployeeDetail
+from hr_mgmt.models import EmployeeDetail
 
 # Create your views here.
 class HumanResourceListView(View):
-    @jwt_utils.signin_decorator 
+    # @jwt_utils.signin_decorator 
     def get(self, request):
         try:
-            admin_id = request.employee.id
-            admin_auth = request.employee.auth
+            # admin_id = request.employee.id
+            admin_id = 1
+            admin_auth = Employee.objects.get(id = admin_id).auth.id
+            # admin_auth = request.employee.auth
 
             limit = 6
 
@@ -37,11 +39,6 @@ class HumanResourceListView(View):
                     status=403
                 )
 
-            queries = dict(request.GET)
-
-            if queries.get('offset'):
-                offset = int(queries['offset'][0])
-
             if queries.get('search'):
                 conditions = []
                 search_list = queries.get('search')[0].split(' ')
@@ -53,45 +50,44 @@ class HumanResourceListView(View):
 
             if offset > len(employee_list):
                 return JsonRespose(
-                    {
-                        'message':'OFFSET_OUT_OF_RANGE'
-                    },
-                    status=400
-                )
+                    {'message':'OFFSET_OUT_OF_RANGE'},status=400)
             
             hr_mgmt_page_list = [hr for hr in employee_list][offset:offset+limit]
 
             returning_list = [
-                {
-                    'no':hr_mgmt_page_list.index(hr),
+                {   'id':hr.id,
+                    'no':hr_mgmt_page_list.index(hr) +1,
                     'name':hr.name_kor,
                     'nickname':hr.nickname,
                     'mobile':hr.mobile,
-                    'dob':hr.rrn[:7],
+                    'dob':encrypt_utils.decrypt(
+                          hr.rrn, my_settings.SECRET.get('random')
+                          ).decode('utf-8')[:6],
                     'email':hr.company_email,
-                    'joined_at':hr.joined_at
+                    'joined_at':EmployeeDetail.objects.get(employee_id=hr.id).joined_at
                 } for hr in hr_mgmt_page_list
             ]
+            print(returning_list)
 
-            return JsonResponse({"employees":returning_list, "total_employees":len(employee_list)}, status=200)
+            return JsonResponse({"employees":returning_list}, status=200)
 
         except ValueError as e:
             return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)         
 
+
 class HumanResourceManagementView(View):
-    @jwt_utils.signin_decorator 
+    # @jwt_utils.signin_decorator 
     def get(self, request, employee_id):
-        admin_id = request.employee.id
-        admin_auth = request.employee.auth
+        # admin_id = request.employee.id
+        admin_id = 1
+        admin_auth = Employee.objects.get(id = admin_id).auth.id
+        # admin_auth = request.employee.auth
 
         if admin_auth != 1:
-            return JsonResponse(
-                {"message": "NO_AUTHORIZATION"},
-                status=403
-            )
+            return JsonResponse({"message": "NO_AUTHORIZATION"},status=403)
 
-        target_employee = Employee.objects.prefetch_related('employeedetail_set').filter(id = employee_id).values()[0]
-        target_employee_detail = target_employee.employeedetail_set.all()[0]
+        target_employee = Employee.objects.filter(id = employee_id).values()[0]
+        target_employee_detail = EmployeeDetail.objects.get(employee_id = employee_id)
 
         def decryption(info):
             return encrypt_utils.decrypt(
@@ -124,7 +120,7 @@ class HumanResourceManagementView(View):
                 'detailed_address' : target_employee['detailed_address'] 
                 },
             'admin_only':{
-                'auth'             : target_employee['auth']
+                'auth'             : target_employee['auth_id'],
                 'joined_at'        : target_employee_detail.joined_at,
                 'probation_period' : target_employee_detail.probation_period,
                 'worked_since'     : target_employee_detail.worked_since,
@@ -140,31 +136,31 @@ class HumanResourceManagementView(View):
             }
         )
 
-    @jwt_utils.signin_decorator 
+    # @jwt_utils.signin_decorator 
     def patch(self, request, employee_id):
         try:
-            admin_id = request.employee.id
+            # admin_id = request.employee.id
+            admin_id =1 
             data = json.loads(request.body)
 
-            if Employee.objects.get(id = admin_id).auth != 1:
+            if Employee.objects.get(id = admin_id).auth.id != 1:
                 return JsonResponse(
                     {"message": "NO_AUTHORIZATION"},
                     status=403
                 )
 
-            target_employee = Employee.objects.prefetch_related('employeedetail_set').filter(id = employee_id)
-            target_employee_detail = target_employee.employeedetail_set.all()[0]
+            target_employee = Employee.objects.filter(id = employee_id)
+            target_employee_detail = EmployeeDetail.objects.filter(employee_id = employee_id)
 
             regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
-            if (company_email in data and not (re.search(regex, data['company_email']))
-                or personal_email in data and not (re.search(regex, data['personal_email']))):
+            if ('company_email' in data and not (re.search(regex, data['company_email']))
+                or 'personal_email' in data and not (re.search(regex, data['personal_email']))):
                 return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
 
 
             employee_field_list = [field.name for field in Employee._meta.get_fields()]
             employee_field_list.remove('password')
             employee_detail_field_list = [field.name for field in EmployeeDetail._meta.get_fields()]
-            employee_detail_field_list.remove('auth')
             
             for field in employee_field_list:
                     if field in data:
@@ -173,15 +169,12 @@ class HumanResourceManagementView(View):
                         else:
                             target_employee.update(**{field : data[field]})
 
+            
+
             for field in employee_detail_field_list:
                 if field in data:
-                    target_employee.update(**{field : data[field]})
-
-            if 'auth' in data:
-                target_employee.update(auth = Auth.objects.get(id = data['auth']))
-
+                    target_employee_detail.update(**{field : data[field]})
             return JsonResponse({"message": "MODIFICATION_SUCCESS"}, status=200)
-
 
         except KeyError as e :
             return JsonResponse({'message': f'KEY_ERROR:{e}'}, status=400)

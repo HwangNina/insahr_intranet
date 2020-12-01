@@ -21,5 +21,6 @@ urlpatterns = [
     path("employee", include("employee.urls")),
     path('project', include('project.urls')),
     path("notice", include("notice.urls")),
-    path("schedule", include("schedule.urls"))
+    path("schedule", include("schedule.urls")),
+    path("humanresource", include("hr_mgmt.urls"))
 ]

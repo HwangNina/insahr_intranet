@@ -1,5 +1,9 @@
 import json
 import requests
+import boto3
+import uuid
+import my_settings
+
 
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -248,8 +252,7 @@ class LikeView(View):
         try:
             data = json.loads(request.body)
             employee_id = 1 #request.employee.id
-            #project = get_object_or_404(Project, pk=project_id)
-
+ 
             if ProjectLike.objects.filter(project_id=project_id, employee_id=employee_id).exists():
                 ProjectLike.objects.delete(employee = employee_id, project = project_id)
                 #project.like.remove(user_id)
@@ -275,15 +278,20 @@ class LikeView(View):
 
 
 class ThreadView(View):
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=my_settings.AWS_ACCESS_KEY['MY_AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key=my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY']
+    )
     #@signin_decorator
-    def post(self,request,project_id):
-        data = request.POST['data']
+    def post(self,request,project_id): 
+        #data = request.POST['data']
         #data = eval(request.POST['data'])
         #data = json.loads(request.body)
         employee_id = 1 #request.employee.id
-        employee_name = Employee.objects.get(id = employee_id).name
+        #content = request.POST.get(['content'])
 
-        if ProjectParticipants.objects.filter(employee_id = employee_id, project_id = project_id).exists():
+        if ProjectParticipant.objects.filter(employee_id = employee_id, project_id = project_id).exists():
             attachment_list = []
             if request.FILES.getlist('attachment', None):
                 for file in request.FILES.getlist('attachment'):
@@ -302,42 +310,95 @@ class ThreadView(View):
                 file_url = None
 
             new_thread = ProjectDetail.objects.create(
-                writer = Employee.objects.get(id=employee_id),
-                content = data['content'],
-                project_detail = project_id
+                writer_id = Employee.objects.get(id=employee_id).id,
+                content = request.POST['content'],
+                project_detail_id = project_id
             )
 
-#            new_notice = Notice.objects.create(
-#                        title     = data['title'],
-#                        content   = data['content'],
-#                        author    = Employee.objects.get(id = employee_id),
-#                        )
-
             for file_url in attachment_list:
-                ProjectAttachment.objects.create(
-                    notice = ProjectDetail.objects.get(id = new_thread.id),
+                new_projectattachment = ProjectAttachment.objects.create(
+                    project_detail = ProjectDetail.objects.get(id = new_thread.id),
                     name   = file_url
                 )
 
-            return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
+            return JsonResponse(
+                {
+                    'project_thread': {
+                        'writer_id':new_thread.writer_id,
+                        'writer_name':Employee.objects.get(id=employee_id).name_kor,
+                        'content':new_thread.content,
+                        'created_at':new_thread.created_at.date()
+                    },
+                    'attachments':{
+                        'id':new_projectattachment.project_detail_id,
+                        'file':new_projectattachment.name}
+                }, status=201)
         return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 400)
 
-    def get(self, request, project_id) :
-        employee_id = 1 #request.employee
-
-        project_title = Project.objects.get(id = project_id)
-        name = Employee.objects.get(id = employee_id).name_kor
-        projects_list = [{
-            'id' : project.id,
-            'title' : project.title,
-        } for project in projects]
+# 이렇게 하면 아예 빈리스트를 반환하는데 왜 인지 이유를 모르겠다...
+#        'attachments':[{
+#                        'id':file.project_detail_id,
+#                        'file':file.name} for file in ProjectAttachment.objects.filter(project_detail_id=new_thread.project_detail_id)]
+#                }, status=201)
 
 
-#    def get(self,request,project_id,thread):
-#        employee_id = 1 #request.employee.id
+    def get(self,request,project_id):
+        employee_id = 1 #request.employee.id
+        project_details = ProjectDetail.objects.filter(project_detail_id = project_id).values()
+        project_title = Project.objects.get(id=project_id)
+
+        detail_list = {[{'thread_id' : detail['id'],
+                       'writer' : detail['writer_id'],
+                       'content' : detail['content']} for detail in  project_details],
+                       {
+                           'attachment' : [{'id' : file.id,
+                                           'name' : file.name}
+                                           for file in ProjectAttachment.objects.filter(project_detail_id = detail['id'])]}}
+
+        return JsonResponse({'detail_list' : detail_list}, status=200)
+
+
+
+#    def get(self,request,project_id):
+#        target_notice = dict(Notice.objects.filter(id = notice_id).values()[0])
 #
-#        if ProjectParticipants.objects.filter(employee_ie = employee_id, project_id = project_id).exists():
+#        notice_list       = [notice for notice in Notice.objects.all().values()]
+#        target_notice_idx = notice_list.index(target_notice)
 #
+#        if target_notice_idx > 1:
+#            previous_notice    = notice_list[target_notice_idx-1]
+#            returning_previous = {
+#                    "title": previous_notice['title'],
+#                    "created_at": previous_notice['created_at']
+#                }
+#        else:
+#            returning_previous = {}
+#
+#        if target_notice_idx < len(notice_list)-1:
+#            next_notice    = notice_list[target_notice_idx+1]
+#            returning_next = {
+#                    "title": next_notice['title'],
+#                    "created_at": next_notice['created_at']
+#                }
+#        else:
+#            returning_next = {}
+#
+#        return JsonResponse(
+#            {
+#                "notice":{
+#                    "title": target_notice['title'],
+#                    "created_at":target_notice['created_at'],
+#                    "content": target_notice['content'],
+#                    "attachments":[f['file'] for f in NoticeAttachment.objects.filter(notice_id = target_notice['id']).values()]
+#                },
+#                "previous":returning_previous,
+#                "next":returning_next
+#            },
+#            status=200
+#        )
+
+
+
 
 
 

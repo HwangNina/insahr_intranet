@@ -20,7 +20,7 @@ class Notice(models.Model):
 
 class NoticeAttachment(models.Model):
     notice = models.ForeignKey(Notice, on_delete=models.CASCADE)
-    file = models.FileField(upload_to='file/%Y/%m/%d')
+    file = models.CharField(max_length=500)
 
     class Meta():
         db_table = 'notice_attachments'

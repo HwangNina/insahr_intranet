@@ -8,8 +8,11 @@ import encrypt_utils
 import jwt_utils
 import requests
 
+from functools        import reduce
+from operator         import __or__ as OR
 from django.http     import JsonResponse
 from django.views    import View
+from django.db.models import Q
 
 from employee.models import Auth, Employee
 from hr_mgmt.models import EmployeeDetail
@@ -21,24 +24,29 @@ class HumanResourceListView(View):
         try:
             # admin_id = request.employee.id
             admin_id = 1
+
+            ### not sure which one will work
             admin_auth = Employee.objects.get(id = admin_id).auth.id
             # admin_auth = request.employee.auth
 
+            # if the user is not an admin then...
+            if admin_auth != 1:
+                return JsonResponse({"message": "NO_AUTHORIZATION"},status=403)
+
+            # pagination
             limit = 6
-
             queries = dict(request.GET)
-
+            
             if queries.get('offset'):
                 offset = int(queries['offset'][0])
             else:
                 offset = 0
 
-            if admin_auth != 1:
-                return JsonResponse(
-                    {"message": "NO_AUTHORIZATION"},
-                    status=403
-                )
+            if offset > len(employee_list):
+                return JsonRespose(
+                    {'message':'OFFSET_OUT_OF_RANGE'},status=400)
 
+            # search filter by name_kor
             if queries.get('search'):
                 conditions = []
                 search_list = queries.get('search')[0].split(' ')
@@ -47,11 +55,8 @@ class HumanResourceListView(View):
                 employee_list = Employee.objects.filter(reduce(OR, conditions))
             else: 
                 employee_list = Employee.objects.all()
-
-            if offset > len(employee_list):
-                return JsonRespose(
-                    {'message':'OFFSET_OUT_OF_RANGE'},status=400)
             
+            # pagination
             hr_mgmt_page_list = [hr for hr in employee_list][offset:offset+limit]
 
             returning_list = [
@@ -67,9 +72,8 @@ class HumanResourceListView(View):
                     'joined_at':EmployeeDetail.objects.get(employee_id=hr.id).joined_at
                 } for hr in hr_mgmt_page_list
             ]
-            print(returning_list)
 
-            return JsonResponse({"employees":returning_list}, status=200)
+            return JsonResponse({"employees":returning_list, "total_employees":len(employee_list)}, status=200)
 
         except ValueError as e:
             return JsonResponse({"message": f"VALUE_ERROR:{e}"}, status=400)         
@@ -86,6 +90,7 @@ class HumanResourceManagementView(View):
         if admin_auth != 1:
             return JsonResponse({"message": "NO_AUTHORIZATION"},status=403)
 
+        # target employee information
         target_employee = Employee.objects.filter(id = employee_id).values()[0]
         target_employee_detail = EmployeeDetail.objects.get(employee_id = employee_id)
 
@@ -144,10 +149,7 @@ class HumanResourceManagementView(View):
             data = json.loads(request.body)
 
             if Employee.objects.get(id = admin_id).auth.id != 1:
-                return JsonResponse(
-                    {"message": "NO_AUTHORIZATION"},
-                    status=403
-                )
+                return JsonResponse({"message": "NO_AUTHORIZATION"},status=403)
 
             target_employee = Employee.objects.filter(id = employee_id)
             target_employee_detail = EmployeeDetail.objects.filter(employee_id = employee_id)
@@ -157,11 +159,12 @@ class HumanResourceManagementView(View):
                 or 'personal_email' in data and not (re.search(regex, data['personal_email']))):
                 return JsonResponse({"message": "INVALID_EMAIL"}, status=400)
 
-
+            # since admin cannot modify the password
             employee_field_list = [field.name for field in Employee._meta.get_fields()]
             employee_field_list.remove('password')
             employee_detail_field_list = [field.name for field in EmployeeDetail._meta.get_fields()]
             
+            # update...
             for field in employee_field_list:
                     if field in data:
                         if field in ['rrn', 'bank_account', 'passport_num']:
@@ -169,11 +172,10 @@ class HumanResourceManagementView(View):
                         else:
                             target_employee.update(**{field : data[field]})
 
-            
-
             for field in employee_detail_field_list:
                 if field in data:
                     target_employee_detail.update(**{field : data[field]})
+
             return JsonResponse({"message": "MODIFICATION_SUCCESS"}, status=200)
 
         except KeyError as e :

@@ -83,7 +83,7 @@ class SignInView(View):
                 key       = my_settings.SECRET.get('SECRET_KEY')
                 algorithm = my_settings.SECRET.get('JWT_ALGORITHM')
                 token     = jwt.encode({'employee' : employee.id},key, algorithm = algorithm).decode('UTF-8')
-                return JsonResponse({"token": token, "message": "SIGNIN_SUCCESS", "name" : employee.name}, status=200)
+                return JsonResponse({"token": token, "message": "SIGNIN_SUCCESS", "name" : employee.name_kor}, status=200)
 
             else:
                 return JsonResponse({"message": "INVALID_PASSWORD"}, status=401)
@@ -170,6 +170,7 @@ class EmployeeInfoView(View):
                         else:
                             Employee.objects.filter(id = employee_id).update(**{field : data[field]})
 
+                # function which returns decrypted value
                 def decryption(info):
                     return encrypt_utils.decrypt(
                                   target_employee[info], my_settings.SECRET.get('random')
@@ -177,6 +178,7 @@ class EmployeeInfoView(View):
 
                 decryption_needed = ['rrn', 'bank_account', 'passport_num']
 
+                # modify the element of the list - decryption_needed. either decrypted result(if there is a value), or None
                 for idx in range(0, len(decryption_needed)):
                     if target_employee[decryption_needed[idx]]:
                         decryption_needed[idx] = decryption(decryption_needed[idx])

@@ -38,23 +38,22 @@ class NoticeListView(View):
 
             if queries.get('offset'):
                 offset = int(queries['offset'][0])
-                del queries['offset']
             else:
                 offset = 0
 
+            if offset > total_notice:
+                return JsonResponse(
+                    {'message':'OFFSET_OUT_OF_RANGE'},status=400)
+                    
             if queries.get('search'):
                 conditions = []
                 search_list = queries.get('search')[0].split(' ')
                 for word in search_list:
                     conditions.append(Q(title__icontains = word))
                 notice_list = Notice.objects.filter(reduce(OR, conditions))
-
             else:
                 notice_list = Notice.objects.all()
 
-            if offset > total_notice:
-                return JsonResponse(
-                    {'message':'OFFSET_OUT_OF_RANGE'},status=400)
 
             notice_page_list = [{
                 'no': notice.id,
@@ -77,30 +76,31 @@ class NoticeDetailView(View):
     # @jwt_utils.signin_decorator
     def post(self, request):
         try:
-            data = eval(request.POST['data'])
             # employee_id = request.employee.id
-            employee_id = 4
-        
+            employee_id = 2
+
             attachment_list = []
             if request.FILES.getlist('attachment', None):
-                for file in request.FILES.getlist('attachment'): 
+                for f in request.FILES.getlist('attachment'): 
                     filename = str(uuid.uuid1()).replace('-','')
                     self.s3_client.upload_fileobj(
-                        file,
+                        f,
                         "thisisninasbucket",
                         filename,
                         ExtraArgs={
-                            "ContentType": file.content_type
+                            "ContentType": f.content_type
                         }
                     )
+                    print(f)
+                    print(filename)
                     file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
                     attachment_list.append(file_url)
             else:
                 file_url = None
     
             new_notice = Notice.objects.create(
-                        title     = data['title'],
-                        content   = data['content'],
+                        title = request.POST['title'],
+                        content = request.POST['content'],
                         author    = Employee.objects.get(id = employee_id),
                         )
 
@@ -123,12 +123,12 @@ class NoticeDetailView(View):
 
         except KeyError as e :
             return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
-    
-    def get(self, request, notice_id):
-        target_notice       = dict(Notice.objects.filter(id = notice_id).values()[0])
 
-        notice_list         = [notice for notice in Notice.objects.all().values()]
-        target_notice_idx   = notice_list.index(target_notice)
+    def get(self, request, notice_id):
+        target_notice = dict(Notice.objects.filter(id = notice_id).values()[0])
+
+        notice_list       = [notice for notice in Notice.objects.all().values()]
+        target_notice_idx = notice_list.index(target_notice)
 
         if target_notice_idx > 1:
             previous_notice    = notice_list[target_notice_idx-1]
@@ -139,7 +139,7 @@ class NoticeDetailView(View):
         else:
             returning_previous = {}
 
-        if target_notice_idx < len(notice_list):
+        if target_notice_idx < len(notice_list)-1:
             next_notice    = notice_list[target_notice_idx+1]
             returning_next = {
                     "title": next_notice['title'],
@@ -147,14 +147,14 @@ class NoticeDetailView(View):
                 }
         else:
             returning_next = {}
-
+        
         return JsonResponse(
             {
                 "notice":{
                     "title": target_notice['title'],
                     "created_at":target_notice['created_at'],
                     "content": target_notice['content'],
-                    "attachments":[f.file for f in NoticeAttachment.objects.filter(notice_id = target_notice['id']).values()]
+                    "attachments":[f['file'] for f in NoticeAttachment.objects.filter(notice_id = target_notice['id']).values()]
                 },
                 "previous":returning_previous,
                 "next":returning_next
@@ -162,16 +162,18 @@ class NoticeDetailView(View):
             status=200
         )        
 
-    @jwt_utils.signin_decorator
+    # @jwt_utils.signin_decorator
     def patch(self, request, notice_id):
         try:
             data = eval(request.POST['data'])
-            employee_id   = request.employee.id
-            employee_auth = request.employee.auth
+            # employee_id   = request.employee.id
+            # employee_auth = request.employee.auth
+            employee_id = 2
+            employee_auth = Employee.objects.get(id = employee_id).auth.id
 
-            target_notice = Notice.objects.prefetch_related('noticeattachment_set').filter(id = notice_id)
+            target_notice = Notice.objects.filter(id = notice_id).values()[0]
 
-            if target_notice.author.id != employee_id and employee_auth != 1:
+            if target_notice['author_id'] != employee_id and employee_auth != 1:
                 return JsonResponse({"message": "ACCESS_DENIED"},status=403)
 
             if 'deleting_files' in data:
@@ -211,11 +213,11 @@ class NoticeDetailView(View):
             return JsonResponse(
                 {
                 'notice': {
-                    'title':target_notice.title,
-                    'content':target_notice.content,
-                    'created_at':target_notice.created_at
+                    'title':target_notice['title'],
+                    'content':target_notice['content'],
+                    'created_at':target_notice['created_at']
                 },
-                'attachments': attachment_list
+                'attachments': [attach.file for attach in NoticeAttachment.objects.filter(notice_id = target_notice['id'])]+ attachment_list
                 }, 
                 status=200)
 

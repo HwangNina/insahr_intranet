@@ -62,7 +62,6 @@ class PeopleView(View):
 
 class ProjectListView(View):
     #@signin_decorator
-
     def post(self,request):
         try:
             data = json.loads(request.body)
@@ -157,6 +156,7 @@ class ProjectListView(View):
 
         return JsonResponse({'main_list' : project_list}, status=200)
 
+    #@signin_decorator
     def delete(self,request,project_id):
         data = json.loads(request.body)
         employee_id = 1 #request.employee
@@ -169,6 +169,7 @@ class ProjectListView(View):
 
             return JsonResponse({'MESSAGE' : 'DELETE_SUCCESS'}, status=200)
 
+    #@signin_decorator
     def patch(self,request,project_id):
         try:
             data = json.loads(request.body)
@@ -196,18 +197,19 @@ class ProjectListView(View):
                             project = Project.objects.get(id=post.first().id)
                         )
 
-                    return JsonResponse({'new_project' : [{
-                        'title' : project.title,
-                        'description' : project.description,
-                        'is_private' : project.is_private,
-                        'start_date' : project.start_date,
-                        'end_date' : project.end_date,
-                        'participants' : patch_participants.employee_id} for project in post]}, status=200)
+                    patch_list = [{'title' : project.title,
+                                   'description' : project.description,
+                                   'is_private' : project.is_private,
+                                   'start_date' : project.start_date,
+                                   'end_date' : project.end_date,
+                                   'participants' : patch_participant.employee_id} for project in post]
+
+                    return JsonResponse({'patch_list' : patch_list}, status=200)
 
                 if len(data['participant']) == 0 :
                     return JsonResponse({'MESSAGE' : 'at_least_one_participant_needed'}, status=400)
 
-                patch_project = post.update(
+                post.update(
                     title = data['title'],
                     description = data['description'],
                     is_private = data['is_private'],
@@ -219,16 +221,19 @@ class ProjectListView(View):
                 participants.delete()
 
                 for person in data['participant']:
-                    patch_participants = ProjectParticipant.objects.create(
+                    patch_participant = ProjectParticipant.objects.create(
                         employee = Employee.objects.get(id=person),
                         project = Project.objects.get(id=post.first().id)
                     )
-                return JsonResponse({'new_project' : {'title' : post.title,
-                                                      'description' : post.description,
-                                                      'is_private' : post.is_private,
-                                                      'start_date' : post.start_date,
-                                                      'end_date' : post.end_date,
-                                                      'participants' : patch_participants.employee}}, status=200)
+
+                patch_list = [{'title' : project.title,
+                               'description' : project.description,
+                               'is_private' : project.is_private,
+                               'start_date' : project.start_date,
+                               'end_date' : project.end_date,
+                               'participants' : patch_participant.employee_id} for project in post]
+
+                return JsonResponse({'patch_list' : patch_list}, status=200)
 
         except KeyError as e :
             return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
@@ -236,70 +241,103 @@ class ProjectListView(View):
         except ValueError as e :
             return JsonResponse({'MESSAGE': f'VALUE_ERROR:{e}'}, status=400)
 
-class ThreadView(View):
+
+class LikeView(View):
+    #@signin_decorator
     def post(self,request,project_id):
-        data = json.loads(request.body)
-        employee_id = request.employee
+        try:
+            data = json.loads(request.body)
+            employee_id = 1 #request.employee.id
+            #project = get_object_or_404(Project, pk=project_id)
+
+            if ProjectLike.objects.filter(project_id=project_id, employee_id=employee_id).exists():
+                ProjectLike.objects.delete(employee = employee_id, project = project_id)
+                #project.like.remove(user_id)
+                return JsonResponse({'MESSAGE': 'PROJECT_IS_UNLIKED'}, status=200)
+            else:
+                ProjectLike.objects.create(project_id=project_id, employee_id=employee_id)
+                #posting.like.add(user_id)
+                return JsonResponse({'MESSAGE': 'PROJECT_IS_LIKED'}, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'MESSAGE':'JSON_ERROR'}, status=400)
+
+    #@signin_decorator
+    def get(self,request):
+        employee_id = 1 #request.employee.id
+
+        if ProjectLike.objects.filter(employee_id = employee_id).exists() :
+            likes = ProjectLike.objects.filter(employee_id = employee_id)
+            like_list = [like_project.project_id for like_project in likes]
+            #id값만 리스트로 넘김. 프론트랑 맞춰보고 dict 형태 필요하면 변경하기
+            return JsonResponse({'like_project_list' : like_list}, status=200)
+        return JsonResponse({'MESSAGE' :'LIKELIST_DOES_NOT_EXIST'})
+
+
+class ThreadView(View):
+    #@signin_decorator
+    def post(self,request,project_id):
+        data = request.POST['data']
+        #data = eval(request.POST['data'])
+        #data = json.loads(request.body)
+        employee_id = 1 #request.employee.id
         employee_name = Employee.objects.get(id = employee_id).name
 
-        if ProjectParticipants.objects.filter(employee_id = employee_id,project_id = project_id).exists() :
-            ProjectDetail.objects.create(
-                writer = employee_name,
+        if ProjectParticipants.objects.filter(employee_id = employee_id, project_id = project_id).exists():
+            attachment_list = []
+            if request.FILES.getlist('attachment', None):
+                for file in request.FILES.getlist('attachment'):
+                    filename = str(uuid.uuid1()).replace('-','')
+                    self.s3_client.upload_fileobj(
+                        file,
+                        "thisisninasbucket",
+                        filename,
+                        ExtraArgs={
+                            "ContentType": file.content_type
+                        }
+                    )
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
+                    attachment_list.append(file_url)
+            else:
+                file_url = None
+
+            new_thread = ProjectDetail.objects.create(
+                writer = Employee.objects.get(id=employee_id),
                 content = data['content'],
                 project_detail = project_id
             )
-            # 첨부파일 저장 내용 추가해야함 
+
+#            new_notice = Notice.objects.create(
+#                        title     = data['title'],
+#                        content   = data['content'],
+#                        author    = Employee.objects.get(id = employee_id),
+#                        )
+
+            for file_url in attachment_list:
+                ProjectAttachment.objects.create(
+                    notice = ProjectDetail.objects.get(id = new_thread.id),
+                    name   = file_url
+                )
+
             return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
         return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 400)
 
+    def get(self, request, project_id) :
+        employee_id = 1 #request.employee
 
-# 첨부파일 저장 
-#        if request.FILES.get('attachment'):
-#            attachment_list = []
-#            attachments     = request.FILES['attachment']
+        project_title = Project.objects.get(id = project_id)
+        name = Employee.objects.get(id = employee_id).name_kor
+        projects_list = [{
+            'id' : project.id,
+            'title' : project.title,
+        } for project in projects]
+
+
+#    def get(self,request,project_id,thread):
+#        employee_id = 1 #request.employee.id
 #
-#            for file in attachments:
-#                filename = str(uuid.uuid1()).replace('-','')
+#        if ProjectParticipants.objects.filter(employee_ie = employee_id, project_id = project_id).exists():
 #
-#                self.s3_client.upload_fileobj(
-#                    attachment,
-#                    "insahr_notice_attachment",
-#                    filename,
-#                    ExtraArgs={
-#                        "ContentType": file.content_type
-#                    })
-#
-#                file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
-#
-#                attachment_list.append(file_url)
-#
-#        else:
-#            file_url = None
-#            ProjectDetail.objects.create(
-#                writer = employee_id,
-#                content = data['content'],
-#                project_detail = project_id
-#            )
-#
-#            for file in attachment_list:
-#                NoticeAttachment.objects.create(
-#                    notice = new_notice.id,
-#                    file   = file_url
-#                )
-#
-        return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'}, status=201)
-#
-#    def get(self, request, project_id) :
-#        employee_id = request.employee
-#
-#        project_title = Project.objects.get(id = project_id)
-#        name = Employee.objects.get(id = employee_id).name_kor
-#        projects_list = [{
-#            'id' : project.id,
-#            'title' : project.title,
-#        } for project in projects]
-#
- 
 
 
 

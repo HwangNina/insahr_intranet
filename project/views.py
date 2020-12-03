@@ -8,6 +8,9 @@ import my_settings
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views import View
+from django.db.models import Q
+from functools import reduce
+from operator import __or__ as OR
 
 from project.models import (
     Project,
@@ -68,8 +71,11 @@ class ProjectListView(View):
     #@signin_decorator
     def post(self,request):
         try:
+            offset = 0
+            limit = 5
             data = json.loads(request.body)
             employee_id = 1 #request.employee
+            projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
 
             #person = employee_id값, 1은True = 비공개 프로젝트, 0은 False = 공개
             if data['is_private'] == 0 :
@@ -89,17 +95,30 @@ class ProjectListView(View):
                         project = Project.objects.get(id=new_project.id)
                     )
 
-                add_project = {'id' : new_project.id,
-                            'created_by' : new_project.created_by.id,
-                            'title' : new_project.title,
-                            'description' : new_project.description,
-                            'is_private' : new_project.is_private,
-                            'start_date' : new_project.start_date,
-                            'end_date' : new_project.end_date,
-                            'participants' : participants.employee_id
-                           }
+                project_list = [{
+                    'id' : project.id,
+                    'title' : project.title,
+                    'description' : project.description,
+                    'start_date' : project.start_date.date(),
+                    'end_date' : project.end_date.date(),
+                    'is_private' : project.is_private,
+                    'participants': len([par.employee for par in project.projectparticipant_set.all()])
+                } for project in projects][offset:offset+limit]
 
-                return JsonResponse({'add_project' : add_project}, status=201)
+                return JsonResponse({'main_list' : project_list}, status=200)
+
+#                생성된 정보만 반환
+#                add_project = {'id' : new_project.id,
+#                            'created_by' : new_project.created_by.id,
+#                            'title' : new_project.title,
+#                            'description' : new_project.description,
+#                            'is_private' : new_project.is_private,
+#                            'start_date' : new_project.start_date,
+#                            'end_date' : new_project.end_date,
+#                            'participants' : participants.employee_id
+#                           }
+
+#                return JsonResponse({'add_project' : add_project}, status=201)
 
             if len(data['participant']) == 0 :
                 return JsonResponse({'MESSAGE' : 'at_least_one_participant_needed'}, status=400)
@@ -119,17 +138,30 @@ class ProjectListView(View):
                     project = Project.objects.get(id=new_project.id)
                 )
 
-            add_project = {'id' : new_project.id,
-                           'created_by' : new_project.created_by.id,
-                           'title' : new_project.title,
-                           'description' : new_project.description,
-                           'start_date' : new_project.start_date,
-                           'end_date' : new_project.end_date,
-                           'is_private' : new_project.is_private,
-                           'participants' : participants.employee_id
-                          }
+            project_list = [{
+                'id' : project.id,
+                'title' : project.title,
+                'description' : project.description,
+                'start_date' : project.start_date.date(),
+                'end_date' : project.end_date.date(),
+                'is_private' : project.is_private,
+                'participants': len([par.employee for par in project.projectparticipant_set.all()])
+            } for project in projects][offset:offset+limit]
 
-            return JsonResponse({'add_project' : add_project}, status = 201)
+            return JsonResponse({'main_list' : project_list}, status=200)
+
+#            생성된 정보만 반환
+#            add_project = {'id' : new_project.id,
+#                           'created_by' : new_project.created_by.id,
+#                           'title' : new_project.title,
+#                           'description' : new_project.description,
+#                           'start_date' : new_project.start_date,
+#                           'end_date' : new_project.end_date,
+#                           'is_private' : new_project.is_private,
+#                           'participants' : participants.employee_id
+#                          }
+#
+#            return JsonResponse({'add_project' : add_project}, status = 201)
 
         except KeyError as e :
             return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
@@ -138,10 +170,35 @@ class ProjectListView(View):
             return JsonResponse({'MESSAGE': f'VALUE_ERROR:{e}'}, status=400)
 
     def get(self,request):
-        offset = int(request.GET.get("offset", "0"))
-        limit = int(request.GET.get("limit", "5"))
-        projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
         employee_id = 1 #request.employee
+        limit = 5
+        projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
+
+        total_project = len(Project.objects.all())
+
+        queries = dict(request.GET)
+
+        if queries.get('offset'):
+            offset = int(queries['offset'][0])
+        else :
+            offset = 0
+
+        if offset > total_project:
+            return JsonResponse({'MESSAGE' : 'OFFSET_OUT_OF_RANGE'}, status=400)
+
+        print(queries.get('search'))
+
+        if queries.get('search'):
+            conditions = []
+            search_list = queries.get('search')[0].split(' ')
+            for word in search_list:
+                conditions.append(Q(title__icontains = word))
+                conditions.append(Q(description__icontains = word))
+            projects = Project.objects.prefetch_related("projectparticipant_set__employee").all().filter(reduce(OR, conditions))
+
+
+        else :
+            projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
 
         project_list = [{
             'id' : project.id,

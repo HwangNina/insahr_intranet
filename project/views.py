@@ -119,15 +119,15 @@ class ProjectListView(View):
                     project = Project.objects.get(id=new_project.id)
                 )
 
-                add_project = {'id' : new_project.id,
-                        'created_by' : new_project.created_by.id,
-                        'title' : new_project.title,
-                        'description' : new_project.description,
-                        'start_date' : new_project.start_date,
-                        'end_date' : new_project.end_date,
-                        'is_private' : new_project.is_private,
-                        'participants' : participants.employee_id
-                       }
+            add_project = {'id' : new_project.id,
+                           'created_by' : new_project.created_by.id,
+                           'title' : new_project.title,
+                           'description' : new_project.description,
+                           'start_date' : new_project.start_date,
+                           'end_date' : new_project.end_date,
+                           'is_private' : new_project.is_private,
+                           'participants' : participants.employee_id
+                          }
 
             return JsonResponse({'add_project' : add_project}, status = 201)
 
@@ -277,6 +277,36 @@ class LikeView(View):
         return JsonResponse({'MESSAGE' :'LIKELIST_DOES_NOT_EXIST'})
 
 
+
+"""
+class SearchView(View):
+    try:
+        employee_id = 1 #request.employee
+        limit = 5
+        total_project = len(Project.objects.all())
+
+        queries = dict(request.GET)
+
+        if queries.get('offset'):
+            offset = int(queries['offset'][0])
+        else :
+            offset = 0
+
+        if offset > total_project:
+            return JsonResponse({'MESSAGE' : 'OFFSET_OUT_OF_RANGE'}, status=400)
+
+        if queries.get('search'):
+            conditions = []
+            search_list = queries.get('search')[0].split('')
+            for word in search_list:
+                conditions.append(Q(title__icontains = word))
+            projects = Project.objects.prefetch_related("projectparticipant_set__employee").all().filter(reduce(OR, conditions))
+        else :
+            projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
+
+"""
+
+
 class ThreadView(View):
     s3_client = boto3.client(
         's3',
@@ -324,6 +354,7 @@ class ThreadView(View):
             return JsonResponse(
                 {
                     'project_thread': {
+                        'thread_id':new_thread.project_detail_id,
                         'writer_id':new_thread.writer_id,
                         'writer_name':Employee.objects.get(id=employee_id).name_kor,
                         'content':new_thread.content,
@@ -344,18 +375,152 @@ class ThreadView(View):
 
     def get(self,request,project_id):
         employee_id = 1 #request.employee.id
-        project_details = ProjectDetail.objects.filter(project_detail_id = project_id).values()
+        project_details = ProjectDetail.objects.filter(project_detail_id = project_id).all()
         project_title = Project.objects.get(id=project_id)
 
-        detail_list = {[{'thread_id' : detail['id'],
-                       'writer' : detail['writer_id'],
-                       'content' : detail['content']} for detail in  project_details],
-                       {
-                           'attachment' : [{'id' : file.id,
-                                           'name' : file.name}
-                                           for file in ProjectAttachment.objects.filter(project_detail_id = detail['id'])]}}
+        detail_list = [[{'thread_id' : detail.id,
+                          'writer' : detail.writer_id,
+                          'content' : detail.content,
+                          'attachment_id' : par.id,
+                          'attachment_name' : par.name
+                         } for par in detail.projectattachment_set.all()]for detail in project_details]
+
+#        detail_list = [[{'thread_id' : detail.id,
+#                       'writer' : detail.writer_id,
+#                       'content' : detail.content} for detail in project_details],
+#                       [[{'attachment_id' : par.id,
+#                        'attachment_name' : par.name,
+#                          'thread_id' : detail.id} for par in detail.projectattachment_set.all()]for detail in project_details]]
+
+        #추후 댓글들리스트도 추가해야함(댓글 생성 후에 같이 넣어주기)
 
         return JsonResponse({'detail_list' : detail_list}, status=200)
 
+"""
+    def patch(self,request,project_id,thread_id):
+        employee_id = 1 #request.employee.id
+        employee_auth = Employee.objects.get(id = employee_id).auth.id
+
+        if ProjectParticipant.objects.filter(employee_id = employee_id, project_id = project_id).exists():
+            attachment_list = []
+            if request.FILES.getlist('attachment', None):
+                for file in request.FILES.getlist('attachment'):
+                    filename = str(uuid.uuid1()).replace('-','')
+                    self.s3_client.upload_fileobj(
+                        file,
+                        "thisisninasbucket",
+                        filename,
+                        ExtraArgs={
+                            "ContentType": file.content_type
+                        }
+                    )
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
+                    attachment_list.append(file_url)
+            else:
+                file_url = None
+
+            new_thread = ProjectDetail.objects.create(
+                writer_id = Employee.objects.get(id=employee_id).id,
+                content = request.POST['content'],
+                project_detail_id = project_id
+            )
+
+            for file_url in attachment_list:
+                new_projectattachment = ProjectAttachment.objects.create(
+                    project_detail = ProjectDetail.objects.get(id = new_thread.id),
+                    name   = file_url
+                )
+
+            return JsonResponse(
+                {
+                    'project_thread': {
+                        'thread_id':new_trhead.
+                        'writer_id':new_thread.writer_id,
+                        'writer_name':Employee.objects.get(id=employee_id).name_kor,
+                        'content':new_thread.content,
+                        'created_at':new_thread.created_at.date()
+                    },
+                    'attachments':{
+                        'id':new_projectattachment.project_detail_id,
+                        'file':new_projectattachment.name}
+                }, status=201)
+        return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 400)
 
 
+
+
+
+ def patch(self, request, notice_id):
+        try:
+            data = eval(request.POST['data'])
+            # employee_id   = request.employee.id
+            # employee_auth = request.employee.auth
+            employee_id = 2
+            employee_auth = Employee.objects.get(id = employee_id).auth.id
+
+            target_notice = Notice.objects.filter(id = notice_id).values()[0]
+
+            if target_notice['author_id'] != employee_id and employee_auth != 1:
+                return JsonResponse({"message": "ACCESS_DENIED"},status=403)
+
+            if 'deleting_files' in data:
+                for file in data['deleting_files']:
+                    if file in [f.id for f in target_notice.noticeattachment_set.all()]:
+                        NoticeAttachment.objects.filter(id = file).delete()
+
+            attachment_list = []
+            if request.FILES.getlist('attachment', None):
+                for file in request.FILES.getlist('attachment'): 
+                    filename = str(uuid.uuid1()).replace('-','')
+                    self.s3_client.upload_fileobj(
+                        file,
+                        "thisisninasbucket",
+                        filename,
+                        ExtraArgs={
+                            "ContentType": file.content_type
+                        }
+                    )
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
+                    attachment_list.append(file_url)
+            else:
+                file_url = None
+            
+            for file_url in attachment_list:
+                NoticeAttachment.objects.create(
+                    notice = target_notice.id,
+                    file   = file_url
+                )
+
+            notice_field_list = [field.name for field in Notice._meta.get_fields()]
+
+            for key in data.keys():
+                if key in notice_field_list:
+                    target_notice.update(**{key : data[key]})
+
+            return JsonResponse(
+                {
+                'notice': {
+                    'title':target_notice['title'],
+                    'content':target_notice['content'],
+                    'created_at':target_notice['created_at']
+                },
+                'attachments': [attach.file for attach in NoticeAttachment.objects.filter(notice_id = target_notice['id'])]+ attachment_list
+                }, 
+                status=200)
+
+        except KeyError as e :
+            return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
+
+    @jwt_utils.signin_decorator
+    def delete(self,request,project_id,thread_id):
+        employee_id = 1 #request.employee.id
+        thread_id = data['thread_id']
+        #target_notice = Notice.objects.get(id = notice_id)
+
+        if target_notice.author.id != employee_id and employee_auth != 1:
+            return JsonResponse({"message": "ACCESS_DENIED"},status=403)
+        
+        target_notice.delete()
+
+        return JsonResponse({"message":"DELETED"},status=200)
+"""

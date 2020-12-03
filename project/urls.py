@@ -8,4 +8,5 @@ urlpatterns = [
     path('/like/<int:project_id>', LikeView.as_view()),
     path('/like', LikeView.as_view()),
     path('/detail/<int:project_id>', ThreadView.as_view()),
+    path('/detail/<int:project_id>/<int:thread_id>', ThreadView.as_view())
 ]

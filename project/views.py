@@ -171,7 +171,7 @@ class ProjectListView(View):
 
     def get(self,request):
         employee_id = 1 #request.employee
-        limit = 5
+        limit = 7
         projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
 
         total_project = len(Project.objects.all())

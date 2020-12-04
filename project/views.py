@@ -334,36 +334,6 @@ class LikeView(View):
         return JsonResponse({'MESSAGE' :'LIKELIST_DOES_NOT_EXIST'})
 
 
-
-"""
-class SearchView(View):
-    try:
-        employee_id = 1 #request.employee
-        limit = 5
-        total_project = len(Project.objects.all())
-
-        queries = dict(request.GET)
-
-        if queries.get('offset'):
-            offset = int(queries['offset'][0])
-        else :
-            offset = 0
-
-        if offset > total_project:
-            return JsonResponse({'MESSAGE' : 'OFFSET_OUT_OF_RANGE'}, status=400)
-
-        if queries.get('search'):
-            conditions = []
-            search_list = queries.get('search')[0].split('')
-            for word in search_list:
-                conditions.append(Q(title__icontains = word))
-            projects = Project.objects.prefetch_related("projectparticipant_set__employee").all().filter(reduce(OR, conditions))
-        else :
-            projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
-
-"""
-
-
 class ThreadView(View):
     s3_client = boto3.client(
         's3',
@@ -421,26 +391,79 @@ class ThreadView(View):
                         'id':new_projectattachment.project_detail_id,
                         'file':new_projectattachment.name}
                 }, status=201)
-        return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 400)
-
-# 이렇게 하면 아예 빈리스트를 반환하는데 왜 인지 이유를 모르겠다...
-#        'attachments':[{
-#                        'id':file.project_detail_id,
-#                        'file':file.name} for file in ProjectAttachment.objects.filter(project_detail_id=new_thread.project_detail_id)]
-#                }, status=201)
+        return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
 
 
     def get(self,request,project_id):
         employee_id = 1 #request.employee.id
-        project_details = ProjectDetail.objects.filter(project_detail_id = project_id).all()
-        project_title = Project.objects.get(id=project_id)
 
-        detail_list = [[{'thread_id' : detail.id,
-                          'writer' : detail.writer_id,
-                          'content' : detail.content,
-                          'attachment_id' : par.id,
-                          'attachment_name' : par.name
-                         } for par in detail.projectattachment_set.all()]for detail in project_details]
+        if ProjectParticipant.objects.filter(employee_id = employee_id, project_id = project_id).exists():
+
+            project_details = ProjectDetail.objects.filter(project_detail_id = project_id).all().prefetch_related('projectattachment_set','projectreview_set')
+
+
+            #project_details = ProjectDetail.objects.filter(project_detail_id = project_id).all().prefetch_related('projectattachment_set','projectreview_set')
+
+            project_title = Project.objects.get(id=project_id).title
+
+            detail_list4 = [{'thread_id' : detail.id,
+                             'writer_id' : detail.writer_id,
+                             'writer_name' : detail.writer.name_kor,
+                             'content' : detail.content,
+                              'attachment' : [{'id' : attachment.id,
+                                              'name' : attachment.name} for attachment in detail.projectattachment_set.all()],
+                             'comment_count' : len([com.content for com in detail.projectreview_set.all()]),
+                             'comment' : [{'comment_id' :com.id,
+                                           'writer_id' : com.writer.id,
+                                           'writer_name' : com.writer.name_kor,
+                                           'created_at' : com.created_at,
+                                           'content' : com.content,
+                                           } for com in detail.projectreview_set.all()]
+                             } for detail in project_details]
+
+
+#            detail_list3 = [[{'thread_id' : detail.id,
+#                             'writer' : detail.writer_id,
+#                             'content' : detail.content,
+#                              'attachment' : {'id' : [attachment.id for attachment in detail.projectattachment_set.all()],
+#                                              'name' : [attachment.name for attachment in detail.projectattachment_set.all()]}
+#                              'attachment_id' : [attachment.id for attachment in detail.projectattachment_set.all()],
+#                              'attachment_name' : [attachment.name for attachment in detail.projectattachment_set.all()],
+#                              'commnet_writer_id' : [com.writer_id.name_kor for com in detail.projectreview_set.all()],
+#                              'comment_created_at' : [com.created_at for com in detail.projectreview_set.all()]
+#                             } for detail in project_details]]
+#                            [[{'comment_writer_id' : com.writer_id.name_kor,
+#                               'comment_created_at' : com.created_at,
+#                               'comment_content' : com.content,
+#                               'comment_count' : len(com.content)
+#                              }for com in detail.projectreview_set.all()] for detail in project_details]]
+#
+#            detail_list2 = [[{'thread_id' : detail.id,
+#                             'writer' : detail.writer_id,
+#                             'content' : detail.content, 
+#                             } for detail in project_details],
+#                            [[{'thread_id' : par.project_detail_id,
+#                               'attachment_id' : par.id,
+#                               'attachment_name' : par.name
+#                              } for par in detail.projectattachment_set.all()] for detail in project_details],
+#                            [[{'comment_writer_id' : com.writer_id.name_kor,
+#                               'comment_created_at' : com.created_at,
+#                               'comment_content' : com.content,
+#                               'comment_count' : len(com.content)
+#                              }for com in detail.projectreview_set.all()] for detail in project_details]]
+
+
+
+#                             'comment' : detail.projectreview_set.get().content,
+#                             'comment_count' : len(detail.projectreview_set.content)
+#                            } for detail in project_details.projectattachment_set.all().projectreview_set.all()]
+
+#            detail_list = [[{'thread_id' : detail.id,
+#                             'writer' : detail.writer_id,
+#                             'content' : detail.content,
+#                             'attachment_id' : par.id,
+#                             'attachment_name' : par.name
+#                            } for par in detail.projectattachment_set.all()]for detail in project_details]
 
 #        detail_list = [[{'thread_id' : detail.id,
 #                       'writer' : detail.writer_id,
@@ -449,11 +472,13 @@ class ThreadView(View):
 #                        'attachment_name' : par.name,
 #                          'thread_id' : detail.id} for par in detail.projectattachment_set.all()]for detail in project_details]]
 
-        #추후 댓글들리스트도 추가해야함(댓글 생성 후에 같이 넣어주기)
+        #추후 댓글들리스트도 추가해야함(해당 thread마다 댓글count도 필요)
 
-        return JsonResponse({'detail_list' : detail_list}, status=200)
+            return JsonResponse({'project_title' : project_title,
+                                 'detail_list' : detail_list4}, status=200)
+        return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
 
-"""
+
     def patch(self,request,project_id,thread_id):
         employee_id = 1 #request.employee.id
         employee_auth = Employee.objects.get(id = employee_id).auth.id
@@ -491,7 +516,7 @@ class ThreadView(View):
             return JsonResponse(
                 {
                     'project_thread': {
-                        'thread_id':new_trhead.
+                        'thread_id':new_trhead,
                         'writer_id':new_thread.writer_id,
                         'writer_name':Employee.objects.get(id=employee_id).name_kor,
                         'content':new_thread.content,
@@ -503,11 +528,7 @@ class ThreadView(View):
                 }, status=201)
         return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 400)
 
-
-
-
-
- def patch(self, request, notice_id):
+    def patch(self, request, notice_id):
         try:
             data = eval(request.POST['data'])
             # employee_id   = request.employee.id
@@ -568,16 +589,66 @@ class ThreadView(View):
         except KeyError as e :
             return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
 
-    @jwt_utils.signin_decorator
+
+    #@jwt_utils.signin_decorator
     def delete(self,request,project_id,thread_id):
+        employee_id   = 1 #request.employee.id
+        #employee_auth = request.employee.auth
+
+        thread = ProjectDetail.objects.get(id = thread_id)
+        thread_comment = ProjectReview.objects.filter(project_detail_id = thread_id)
+
+        if thread.writer_id != employee_id and employee_auth != 1:
+            return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status=403)
+
+        thread.delete()
+        thread_comment.delete()
+        return JsonResponse({'MESSAGE' : 'DELETED'},status=200)
+
+
+class CommentView(View):
+    def post(self,request,project_id,thread_id):
+        data = json.loads(request.body)
         employee_id = 1 #request.employee.id
-        thread_id = data['thread_id']
-        #target_notice = Notice.objects.get(id = notice_id)
 
-        if target_notice.author.id != employee_id and employee_auth != 1:
-            return JsonResponse({"message": "ACCESS_DENIED"},status=403)
-        
-        target_notice.delete()
+        if not data['content'] :
+            return JsonResponse({'MESSAGE' : 'NEED_CONTENT'}, status=404)
 
-        return JsonResponse({"message":"DELETED"},status=200)
-"""
+        if ProjectParticipant.objects.filter(employee_id = employee_id, project_id = project_id).exists():
+            ProjectReview.objects.create(
+                content = data['content'],
+                project_detail_id = ProjectDetail.objects.get(id=thread_id).id,
+                writer_id = employee_id
+            )
+            #전체 데이터 반환(새로 생긴 댓글, 댓글 count까지)
+
+            return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'},status=201)
+        return JSonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
+
+    def patch(self,request,project_id,thread_id,comment_id):
+        data = json.loads(request.body)
+        employee_id = 1 #request.employee.id
+        comment = ProjectReview.objects.get(id=comment_id)
+
+        if comment.writer_id == employee_id :
+            ProjectReview.objects.update(
+                content = data['content']
+            )
+
+            return JsonResponse({'MESSAGE' : 'PATCH_SUCCESS'},status = 200)
+        return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
+
+    def delete(self,request,project_id,thread_id,comment_id):
+        employee_id = 1 #request.employee.id
+        employee_auth = 1 #request.employee.auth
+        comment = ProjectReview.objects.get(id=comment_id)
+
+        if comment.writer_id != employee_id or employee_auth != 1 :
+            return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status=403)
+
+        comment.delete()
+        return JsonResponse({'MESSAGE' : 'DELETE_SUCCESS'}, status = 200)
+
+
+
+

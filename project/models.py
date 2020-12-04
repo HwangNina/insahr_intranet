@@ -39,7 +39,7 @@ class ProjectParticipant(models.Model):
 
 class ProjectAttachment(models.Model):
     project_detail = models.ForeignKey('ProjectDetail', on_delete = models.CASCADE)
-    name = models.CharField(max_length = 100)
+    name = models.CharField(max_length = 500)
 
     class Meta :
         db_table = 'project_attachments'

@@ -382,7 +382,7 @@ class ThreadView(View):
         #data = eval(request.POST['data'])
         #data = json.loads(request.body)
         employee_id = 1 #request.employee.id
-        #content = request.POST.get(['content'])
+        #content = request.POST.get(['content']) 
 
         if ProjectParticipant.objects.filter(employee_id = employee_id, project_id = project_id).exists():
             attachment_list = []
@@ -394,10 +394,15 @@ class ThreadView(View):
                         "thisisninasbucket",
                         filename,
                         ExtraArgs={
-                            "ContentType": file.content_type
+                            "ContentType": file.content_type,
+                            "ContentSize" : file.content_size
                         }
                     )
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
+                    print(file) 
+                    print(filename)
+                    print(size)
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}+{file.content_type}"
+                    #file_name = file_name
                     attachment_list.append(file_url)
             else:
                 file_url = None

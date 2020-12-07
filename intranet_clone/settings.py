@@ -41,29 +41,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
     'storages', 
     'employee',
     'notice'
-=======
     'employee'
->>>>>>> 9661418... [EDIT] 회원가입 뷰 작성
-=======
-    'employee'
->>>>>>> 9661418... [EDIT] 회원가입 뷰 작성
-=======
-    'employee'
->>>>>>> 9661418... [EDIT] 회원가입 뷰 작성
-=======
-    'employee'
->>>>>>> 9661418... [EDIT] 회원가입 뷰 작성
-=======
-    'employee'
->>>>>>> 9661418... [EDIT] 회원가입 뷰 작성
 ]
 
 MIDDLEWARE = [
@@ -101,7 +82,7 @@ WSGI_APPLICATION = 'intranet_clone.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
-DATABASES = my_settings.DATABASES'storages', 
+DATABASES = my_settings.DATABASES 
 
 # S3 설정을 위한 변수
 # AWS_xxx 의 변수들은 aws-S3, boto3 모듈을 위한 변수들이다.

@@ -19,8 +19,8 @@ class Attendance(models.Model):
     begin_at = models.DateTimeField(auto_now=False, auto_now_add=False)
     finish_at = models.DateTimeField(auto_now=False, auto_now_add=False, null=True)
     total_pause = models.DurationField(null=True)
-    written_by = models.ForeignKey(Employee, verbose_name=_(""), on_delete=models.CASCADE)
-    amended_by = models.ForeignKey(Employee, verbose_name=_(""), on_delete=models.CASCADE)
+    written_by = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    amended_by = models.ForeignKey(Employee, on_delete=models.CASCADE)
     content = models.TextField(null=True)
 
     def __str__(self):

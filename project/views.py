@@ -211,8 +211,19 @@ class ProjectListView(View):
         } for project in projects][offset:offset+limit]
 
         if ProjectLike.objects.filter(employee_id = employee_id).exists() :
-            likes = ProjectLike.objects.filter(employee_id = employee_id)
-            like_list = [like_project.project_id for like_project in likes]
+#            likes = ProjectLike.objects.filter(employee_id = employee_id)
+#            like_list = [like_project.project_id for like_project in likes]
+
+            likes = ProjectLike.objects.filter(employee_id = employee_id).select_related('project','employee').all()
+
+            like_list = [{'id' : like.project.id,
+                          'title' : like.project.title,
+                          'description' : like.project.description,
+                          'is_private' : like.project.is_private,
+                          'start_date' : like.project.start_date,
+                          'end_date' : like.project.end_date,
+                          'participants' : len([par.employee_id for par in like.project.projectparticipant_set.all()])} for like in likes]
+
             return JsonResponse({'main_list' : project_list, 'like_project_list' : like_list}, status=200)
 
         return JsonResponse({'main_list' : project_list}, status=200)
@@ -258,7 +269,8 @@ class ProjectListView(View):
                             project = Project.objects.get(id=post.first().id)
                         )
 
-                    patch_list = [{'title' : project.title,
+                    patch_list = [{'id' : project.id,
+                                   'title' : project.title,
                                    'description' : project.description,
                                    'is_private' : project.is_private,
                                    'start_date' : project.start_date,
@@ -287,7 +299,8 @@ class ProjectListView(View):
                         project = Project.objects.get(id=post.first().id)
                     )
 
-                patch_list = [{'title' : project.title,
+                patch_list = [{'id' : project.id,
+                               'title' : project.title,
                                'description' : project.description,
                                'is_private' : project.is_private,
                                'start_date' : project.start_date,
@@ -308,16 +321,29 @@ class LikeView(View):
     def post(self,request,project_id):
         try:
             data = json.loads(request.body)
+            #post = Project.objects.filter(id = project_id)
+
             employee_id = 1 #request.employee.id
- 
+
+            likes = ProjectLike.objects.filter(employee_id = employee_id).select_related('project','employee').all()
+
+            like_list = [{'id' : like.project.id,
+                          'title' : like.project.title,
+                          'description' : like.project.description,
+                          'is_private' : like.project.is_private,
+                          'start_date' : like.project.start_date,
+                          'end_date' : like.project.end_date,
+                          'participants' : len([par.employee_id for par in like.project.projectparticipant_set.all()])} for like in likes]
+
+
             if ProjectLike.objects.filter(project_id=project_id, employee_id=employee_id).exists():
                 project = ProjectLike.objects.get(employee_id = employee_id, project_id = project_id)
                 project.delete()
-                return JsonResponse({'MESSAGE': 'PROJECT_IS_UNLIKED'}, status=200)
+                return JsonResponse({'like_list': like_list}, status=200)
+
             else:
                 ProjectLike.objects.create(project_id=project_id, employee_id=employee_id)
-                #posting.like.add(user_id)
-                return JsonResponse({'MESSAGE': 'PROJECT_IS_LIKED'}, status=201)
+                return JsonResponse({'like_list': like_list}, status=201)
 
         except json.JSONDecodeError:
             return JsonResponse({'MESSAGE':'JSON_ERROR'}, status=400)
@@ -327,9 +353,19 @@ class LikeView(View):
         employee_id = 1 #request.employee.id
 
         if ProjectLike.objects.filter(employee_id = employee_id).exists() :
-            likes = ProjectLike.objects.filter(employee_id = employee_id)
-            like_list = [like_project.project_id for like_project in likes]
-            #id값만 리스트로 넘김. 프론트랑 맞춰보고 dict 형태 필요하면 변경하기
+#            likes = ProjectLike.objects.filter(employee_id = employee_id)
+#            like_list = [like_project.project_id for like_project in likes]
+
+            likes = ProjectLike.objects.filter(employee_id = employee_id).select_related('project','employee').all()
+
+            like_list = [{'id' : like.project.id,
+                          'title' : like.project.title,
+                          'description' : like.project.description,
+                          'is_private' : like.project.is_private,
+                          'start_date' : like.project.start_date,
+                          'end_date' : like.project.end_date,
+                          'participants' : len([par.employee_id for par in like.project.projectparticipant_set.all()])} for like in likes]
+
             return JsonResponse({'like_project_list' : like_list}, status=200)
         return JsonResponse({'MESSAGE' :'LIKELIST_DOES_NOT_EXIST'})
 
@@ -389,7 +425,9 @@ class ThreadView(View):
                     },
                     'attachments':{
                         'id':new_projectattachment.project_detail_id,
-                        'file':new_projectattachment.name}
+                        'name' : new_projectattachment.name,
+                        'url':new_projectattachment.url,
+                        'size' :new_projectattachment.size}
                 }, status=201)
         return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
 
@@ -411,7 +449,9 @@ class ThreadView(View):
                              'writer_name' : detail.writer.name_kor,
                              'content' : detail.content,
                               'attachment' : [{'id' : attachment.id,
-                                              'name' : attachment.name} for attachment in detail.projectattachment_set.all()],
+                                               'name' : attachment.name,
+                                               'url' : attachment.url,
+                                               'size' : attachment.size} for attachment in detail.projectattachment_set.all()],
                              'comment_count' : len([com.content for com in detail.projectreview_set.all()]),
                              'comment' : [{'comment_id' :com.id,
                                            'writer_id' : com.writer.id,

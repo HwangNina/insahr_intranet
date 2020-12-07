@@ -7,7 +7,9 @@ from django.http import JsonResponse
 
 from employee.models import Auth, Employee
 from attendance.models import AttendanceLabel, Attendance
-# Create your views here.
+
+class 
+
 
 class WorkingHourView(View):
     # @jwt_utils.signin_decorator
@@ -19,11 +21,21 @@ class WorkingHourView(View):
             new_attendance = Attendance(
                 employee = Employee.objects.get(id = data['employee']),
                 label = AttendanceLabel.objects.get(id = data['label']),
-                begin_at = data['begin_at'],
+                begin_at = data['start_time'],
                 written_by = Employee.objects.get(id = employee_id),
                 amended_by = Employee.objects.get(id = employee_id),
                 content = data['content']
             ).save()
+
+#            new_attendance = Attendance(
+#                employee = Employee.objects.get(id = data['employee']),
+#                label = AttendanceLabel.objects.get(id = data['label']),
+#                begin_at = data['begin_at'],
+#                written_by = Employee.objects.get(id = employee_id),
+#                amended_by = Employee.objects.get(id = employee_id),
+#                content = data['content']
+#            ).save()
+
 
             return JsonResponse({"message":new_attendance},status=200)
 

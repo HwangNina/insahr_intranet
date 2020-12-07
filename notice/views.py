@@ -114,6 +114,7 @@ class NoticeDetailView(View):
             return JsonResponse(
                 {
                 'notice': {
+                    'id' : new_notice.id,
                     'title':new_notice.title,
                     'content':new_notice.content,
                     'created_at':new_notice.created_at

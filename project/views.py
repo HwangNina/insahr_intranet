@@ -311,8 +311,8 @@ class LikeView(View):
             employee_id = 1 #request.employee.id
  
             if ProjectLike.objects.filter(project_id=project_id, employee_id=employee_id).exists():
-                ProjectLike.objects.delete(employee = employee_id, project = project_id)
-                #project.like.remove(user_id)
+                project = ProjectLike.objects.get(employee_id = employee_id, project_id = project_id)
+                project.delete()
                 return JsonResponse({'MESSAGE': 'PROJECT_IS_UNLIKED'}, status=200)
             else:
                 ProjectLike.objects.create(project_id=project_id, employee_id=employee_id)

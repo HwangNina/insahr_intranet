@@ -388,22 +388,43 @@ class ThreadView(View):
             attachment_list = []
             if request.FILES.getlist('attachment', None):
                 for file in request.FILES.getlist('attachment'):
-                    filename = str(uuid.uuid1()).replace('-','')
+                    filecode = str(uuid.uuid1()).replace('-','')
+                    filename = file.name
+                    print(file)
+                    print(file.name)
+                    print(filename)
+                    filesize = file.size
+
                     self.s3_client.upload_fileobj(
                         file,
                         "thisisninasbucket",
                         filename,
                         ExtraArgs={
-                            "ContentType": file.content_type,
-                            "ContentSize" : file.content_size
+                            "ContentType": file.content_type
                         }
                     )
-                    print(file) 
-                    print(filename)
-                    print(size)
+
+#                    BUCKET_NAME = 'thisisninasbucket'
+#                    KEY = 'file' 
+#                    client = boto3.client('s3')
+#                    resp = client.head_object(Bucket=BUCKET_NAME, Key=KEY)
+#                    size = resp['ContentLength']
+#
+#                    obj = s3.
+#
+#
+#
+#                    print(file) 
+                    print(filesize) 
                     file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}+{file.content_type}"
                     #file_name = file_name
+                    attachment_list.append(filecode)
+                    attachment_list.append(filename)
                     attachment_list.append(file_url)
+                    attachment_list.append(filesize)
+                    print(file_url)
+                    print(attachment_list)
+
             else:
                 file_url = None
 
@@ -413,27 +434,30 @@ class ThreadView(View):
                 project_detail_id = project_id
             )
 
-            for file_url in attachment_list:
+            for file in attachment_list:
                 new_projectattachment = ProjectAttachment.objects.create(
                     project_detail = ProjectDetail.objects.get(id = new_thread.id),
-                    name   = file_url
+                    name = filename,
+                    url   = file_url,
+                    size  = filesize,
+                    code  = filecode
                 )
 
-            return JsonResponse(
-                {
-                    'project_thread': {
-                        'thread_id':new_thread.project_detail_id,
-                        'writer_id':new_thread.writer_id,
-                        'writer_name':Employee.objects.get(id=employee_id).name_kor,
-                        'content':new_thread.content,
-                        'created_at':new_thread.created_at.date()
-                    },
-                    'attachments':{
-                        'id':new_projectattachment.project_detail_id,
-                        'name' : new_projectattachment.name,
-                        'url':new_projectattachment.url,
-                        'size' :new_projectattachment.size}
-                }, status=201)
+            return JsonResponse({
+                'project_thread': {
+                    'thread_id':new_thread.project_detail_id,
+                    'writer_id':new_thread.writer_id,
+                    'writer_name':Employee.objects.get(id=employee_id).name_kor,
+                    'content':new_thread.content,
+                    'created_at':new_thread.created_at.date()
+                },
+                'attachments':{
+                    'id':new_projectattachment.project_detail_id,
+                    'code' : new_projectattachment.code,
+                    'name' : new_projectattachment.name,
+                    'url':new_projectattachment.url,
+                    'size' :new_projectattachment.size}
+            }, status=201)
         return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
 
 

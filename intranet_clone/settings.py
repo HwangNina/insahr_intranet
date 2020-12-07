@@ -14,6 +14,7 @@ from pathlib import Path
 
 import my_settings
 import os
+import boto3
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,8 +44,10 @@ INSTALLED_APPS = [
     'corsheaders',
     'storages', 
     'employee',
-    'notice'
-    'employee'
+    'notice',
+    'project',
+    'schedule',
+    'hr_mgmt'
 ]
 
 MIDDLEWARE = [
@@ -56,6 +59,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'intranet_clone.middleware.PutParsingMiddleware',
+    'intranet_clone.middleware.JSONParsingMiddleware'
 ]
 
 ROOT_URLCONF = 'intranet_clone.urls'
@@ -82,30 +87,32 @@ WSGI_APPLICATION = 'intranet_clone.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
-DATABASES = my_settings.DATABASES 
 
-# S3 설정을 위한 변수
-# AWS_xxx 의 변수들은 aws-S3, boto3 모듈을 위한 변수들이다.
+DATABASES = my_settings.DATABASES
 
-# 엑세스 키와 시크릿 키는 다른 파일로 작성, 임포트하여 사용
-AWS_ACCESS_KEY_ID = MY_AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY = MY_AWS_SECRET_ACCESS_KEY
 
-AWS_REGION = 'ap-northeast-2'
-AWS_STORAGE_BUCKET_NAME = 'beap-test-shop'
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.%s.amazonaws.com' % (
-    AWS_STORAGE_BUCKET_NAME, AWS_REGION)
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=86400',
-}
-AWS_DEFAULT_ACL = 'public-read'
-AWS_LOCATION = 'static'
-STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
+# AWS S3
+
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static')
-]
 
+AWS_ACCESS_KEY_ID = my_settings.AWS_ACCESS_KEY['MY_AWS_ACCESS_KEY_ID'] # 액세스 키
+AWS_SECRET_ACCESS_KEY = my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY'] # 비밀 액세스 키
+
+AWS_REGION = "ap-northeast-2" # AWS 지역
+
+AWS_STORAGE_BUCKET_NAME = "thisisninasbucket" # 버킷 이름
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.%s.amazonaws.com' % (
+AWS_STORAGE_BUCKET_NAME, AWS_REGION)
+
+AWS_STATIC_LOCATION = 'static'
+STATICFILES_STORAGE = 'intranet_clone.asset_storage.StaticStorage'
+
+AWS_PUBLIC_MEDIA_LOCATION = 'media/public'
+DEFAULT_FILE_STORAGE = 'intranet_clone.asset_storage.PublicMediaStorage'
+
+AWS_PRIVATE_MEDIA_LOCATION = 'media/private'
+PRIVATE_FILE_STORAGE = 'intranet_clone.asset_storage.PrivateMediaStorage'
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
 
@@ -209,3 +216,7 @@ LOGGING = {
         },
     },
 }
+
+
+#DATA_UPLOAD_MAX_NUMBER_FIELDS = 10240 # higher than the count of fields
+

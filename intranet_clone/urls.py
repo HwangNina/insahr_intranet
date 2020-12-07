@@ -15,6 +15,12 @@ Including another URLconf
 """
 from django.urls import path, include
 
+from notice.views import NoticeMainView
+
 urlpatterns = [
-    path("employee", include("employee.urls"))
+    path("employee", include("employee.urls")),
+    path('project', include('project.urls')),
+    path("notice", include("notice.urls")),
+    path("schedule", include("schedule.urls")),
+    path("humanresource", include("hr_mgmt.urls"))
 ]

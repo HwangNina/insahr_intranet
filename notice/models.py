@@ -7,7 +7,6 @@ from employee.models    import Employee
 
 class Notice(models.Model):
     title = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=200, unique=True)
     content = models.TextField()
     author = models.ForeignKey(Employee, on_delete=models.DO_NOTHING)
     created_at = models.DateField(default=timezone.now)
@@ -21,7 +20,7 @@ class Notice(models.Model):
 
 class NoticeAttachment(models.Model):
     notice = models.ForeignKey(Notice, on_delete=models.CASCADE)
-    file = models.FileField(upload_to='file/%Y/%m/%d')
+    file = models.CharField(max_length=500)
 
     class Meta():
         db_table = 'notice_attachments'

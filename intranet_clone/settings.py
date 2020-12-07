@@ -88,7 +88,9 @@ WSGI_APPLICATION = 'intranet_clone.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
+
 DATABASES = my_settings.DATABASES
+
 
 # AWS S3
 
@@ -216,4 +218,6 @@ LOGGING = {
     },
 }
 
+
 #DATA_UPLOAD_MAX_NUMBER_FIELDS = 10240 # higher than the count of fields
+

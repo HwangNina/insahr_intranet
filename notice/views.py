@@ -227,6 +227,7 @@ class NoticeDetailView(View):
     @jwt_utils.signin_decorator
     def delete(self, request, notice_id):
         employee_id = request.employee.id
+        employee_auth = request.employee.auth.id
         target_notice = Notice.objects.get(id = notice_id)
        
         if target_notice.author.id != employee_id and employee_auth != 1:

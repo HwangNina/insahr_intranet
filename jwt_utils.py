@@ -21,7 +21,6 @@ def signin_decorator(func):
             if token == None:
                 return JsonResponse({"message" : "TOKEN_DOES_NOT_EXIST"}, status=403)
 
-           
             decode = jwt.decode(token, key, algorithm = algorithm)
             request.employee = Employee.objects.get(id = decode['employee'])
 

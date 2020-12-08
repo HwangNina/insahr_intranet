@@ -81,20 +81,30 @@ class NoticeDetailView(View):
 
             attachment_list = []
             if request.FILES.getlist('attachment', None):
-                for f in request.FILES.getlist('attachment'): 
-                    filename = str(uuid.uuid1()).replace('-','')
+                for file in request.FILES.getlist('attachment'): 
+                    filecode = str(uuid.uuid1()).replace('-','')
+                    filename = file.name
+                    filesize = file.size
+
+                    print(file)
+                    print(file.name)
+                    print(filecode)
+                    print(filesize)
                     self.s3_client.upload_fileobj(
-                        f,
+                        file,
                         "thisisninasbucket",
                         filename,
                         ExtraArgs={
-                            "ContentType": f.content_type
+                            "ContentType": file.content_type
                         }
-                    )
-                    print(f)
+                    ) 
                     print(filename)
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}+{file.content_type}"
                     attachment_list.append(file_url)
+                    attachment_list.append(filecode)
+                    attachment_list.append(filename)
+                    attachment_list.append(filesize)
+                    print(attachment_list)
             else:
                 file_url = None
     
@@ -107,17 +117,26 @@ class NoticeDetailView(View):
             for file_url in attachment_list:
                 NoticeAttachment.objects.create(
                     notice = Notice.objects.get(id = new_notice.id),
-                    file   = file_url
+                    name = filename,
+                    url = file_url,
+                    size = filesize,
+                    code   = filecode
                 )
             
             return JsonResponse(
                 {
                 'notice': {
+                    'id' : new_notice.id,
                     'title':new_notice.title,
                     'content':new_notice.content,
                     'created_at':new_notice.created_at
                 },
-                'attachments':[{'id':f.id, 'file':f.file} for f in NoticeAttachment.objects.filter(notice_id=new_notice.id)]
+                'attachments':[{'id':f.id,
+                                'code' : f.code,
+                                'name' : f.name,
+                                'url':f.url,
+                                'size' : f.size
+                               } for f in NoticeAttachment.objects.filter(notice_id=new_notice.id)]
                 }, 
                 status=201)
 

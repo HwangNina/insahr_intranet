@@ -87,10 +87,6 @@ class NoticeDetailView(View):
                     filename = file.name
                     filesize = file.size
 
-                    print(file)
-                    print(file.name)
-                    print(filecode)
-                    print(filesize)
                     self.s3_client.upload_fileobj(
                         file,
                         "thisisninasbucket",
@@ -100,14 +96,9 @@ class NoticeDetailView(View):
                         }
                     ) 
                     print(filename)
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}+{file.content_type}"
-                    attachment_list.append(file_url)
-                    attachment_list.append(filecode)
-                    attachment_list.append(filename)
-                    attachment_list.append(filesize)
-                    print(attachment_list)
-            else:
-                file_url = None
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
+                    attachment_list.append({'filename':filename,'filecode':filecode,'filesize':filesize,'fileurl':file_url})
+                    
     
             new_notice = Notice.objects.create(
                         title = request.POST['title'],
@@ -115,13 +106,13 @@ class NoticeDetailView(View):
                         author    = Employee.objects.get(id = employee_id),
                         )
 
-            for file_url in attachment_list:
+            for content in attachment_list:
                 NoticeAttachment.objects.create(
                     notice = Notice.objects.get(id = new_notice.id),
-                    name = filename,
-                    url = file_url,
-                    size = filesize,
-                    code   = filecode
+                    name = content['filename'],
+                    url = content['fileurl'],
+                    size = content['filesize'],
+                    code   = content['filecode']
                 )
             
             return JsonResponse(
@@ -174,7 +165,7 @@ class NoticeDetailView(View):
                     "title": target_notice['title'],
                     "created_at":target_notice['created_at'],
                     "content": target_notice['content'],
-                    "attachments":[f['file'] for f in NoticeAttachment.objects.filter(notice_id = target_notice['id']).values()]
+                    "attachments":[{'name':f['name'],'code':f['code'],'size':f['size'],'id':f['id']} for f in NoticeAttachment.objects.filter(notice_id = target_notice['id']).values()]
                 },
                 "previous":returning_previous,
                 "next":returning_next
@@ -200,11 +191,15 @@ class NoticeDetailView(View):
                 for file in data['deleting_files']:
                     if file in [f.id for f in target_notice.noticeattachment_set.all()]:
                         NoticeAttachment.objects.filter(id = file).delete()
+            
 
             attachment_list = []
             if request.FILES.getlist('attachment', None):
                 for file in request.FILES.getlist('attachment'): 
-                    filename = str(uuid.uuid1()).replace('-','')
+                    filecode = str(uuid.uuid1()).replace('-','')
+                    filename = file.name
+                    filesize = file.size
+
                     self.s3_client.upload_fileobj(
                         file,
                         "thisisninasbucket",
@@ -212,16 +207,19 @@ class NoticeDetailView(View):
                         ExtraArgs={
                             "ContentType": file.content_type
                         }
-                    )
+                    ) 
+                    print(filename)
                     file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
-                    attachment_list.append(file_url)
-            else:
-                file_url = None
-            
-            for file_url in attachment_list:
+                    attachment_list.append({'filename':filename,'filecode':filecode,'filesize':filesize,'fileurl':file_url})
+        
+
+            for content in attachment_list:
                 NoticeAttachment.objects.create(
-                    notice = target_notice.id,
-                    file   = file_url
+                    notice = Notice.objects.get(id = new_notice.id),
+                    name = content['filename'],
+                    url = content['fileurl'],
+                    size = content['filesize'],
+                    code   = content['filecode']
                 )
 
             notice_field_list = [field.name for field in Notice._meta.get_fields()]

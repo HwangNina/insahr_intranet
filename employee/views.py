@@ -10,6 +10,9 @@ import requests
 import boto3
 import uuid
 
+
+from dateutil.relativedelta import relativedelta
+from datetime import datetime
 from django.http     import JsonResponse
 from django.views    import View
 
@@ -83,7 +86,13 @@ class SignInView(View):
                 key       = my_settings.SECRET.get('SECRET_KEY')
                 algorithm = my_settings.SECRET.get('JWT_ALGORITHM')
                 token     = jwt.encode({'employee' : employee.id},key, algorithm = algorithm).decode('UTF-8')
-                return JsonResponse({"token": token, "message": "SIGNIN_SUCCESS", "name" : employee.name_kor}, status=200)
+                return JsonResponse({
+                                    "token": token, 
+                                    "message": "SIGNIN_SUCCESS", 
+                                    "name" : employee.name_kor, 
+                                    "joined_since":relativedelta(datetime.now(), employee.employeedetail.joined_at).days, 
+                                    "profile_image":employee.profile_image
+                                    }, status=200)
 
             else:
                 return JsonResponse({"message": "INVALID_PASSWORD"}, status=401)

@@ -32,7 +32,7 @@ import jwt_utils
 class MainListView(View):
     @jwt_utils.signin_decorator
     def get(self,request):
-        recent_projects = list(Project.objects.all())[-4:] 
+        recent_projects = list(Project.objects.prefetch_related('projectparticipant_set').all())[-4:] 
         employee_id = request.employee.id
 
         project_list = [{
@@ -42,7 +42,7 @@ class MainListView(View):
             'start_date' : project.start_date.date(),
             'end_date' : project.end_date.date(),
             'is_private' : project.is_private,
-            'participants': len([par.employee for par in project.projectparticipant_set.all()])
+            'participants': len([par.employee for par in project.projectparticipant_set.filter(project_id = project.id)])
         } for project in recent_projects]
 
         if ProjectLike.objects.filter(employee_id = employee_id).exists() :
@@ -321,6 +321,7 @@ class LikeView(View):
     @jwt_utils.signin_decorator
     def post(self,request,project_id):
         employee_id = request.employee.id
+        print(employee_id)
         likes = ProjectLike.objects.filter(employee_id = employee_id).select_related('project','employee').all()
 
 #        like_list = [{'id' : like.project.id,
@@ -447,13 +448,13 @@ class ThreadView(View):
                 }, status=201)
         return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
 
-
+    #@jwt_utils.signin_decorator
     def get(self,request,project_id):
         employee_id = 1 #request.employee.id
 
         if ProjectParticipant.objects.filter(employee_id = employee_id, project_id = project_id).exists():
 
-            project_details = ProjectDetail.objects.filter(project_detail_id = project_id).all().prefetch_related('projectattachment_set','projectreview_set')
+            project_details = ProjectDetail.objects.filter(project_detail_id = project_id).select_related('writer').prefetch_related('projectattachment_set','projectreview_set').all()
 
 
             #project_details = ProjectDetail.objects.filter(project_detail_id = project_id).all().prefetch_related('projectattachment_set','projectreview_set')

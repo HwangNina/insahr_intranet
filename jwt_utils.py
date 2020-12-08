@@ -21,8 +21,13 @@ def signin_decorator(func):
             if token == None:
                 return JsonResponse({"message" : "TOKEN_DOES_NOT_EXIST"}, status=403)
 
+            print(token)
+
             decode = jwt.decode(token, key, algorithm = algorithm)
+
+            print(decode)
             request.employee = Employee.objects.get(id = decode['employee'])
+            print(request.employee)
 
         except Employee.DoesNotExist:
             return JsonResponse({'message': 'USER_DOES_NOT_EXIST'}, status=403)

@@ -27,13 +27,13 @@ from employee.models import (
     # EmployeeDetail,
 )
 
-from jwt_utils import signin_decorator
+import jwt_utils
 
 class MainListView(View):
-    #@signin_decorator
+    @jwt_utils.signin_decorator
     def get(self,request):
         recent_projects = list(Project.objects.all())[-4:] 
-        employee_id = 1 #request.employee
+        employee_id = request.employee.id
 
         project_list = [{
             'id' : project.id,
@@ -68,13 +68,13 @@ class PeopleView(View):
             return JsonResponse({'MESSAGE' : f"EXCEPT_ERROR:{e}"}, status=400)
 
 class ProjectListView(View):
-    #@signin_decorator
+    @jwt_utils.signin_decorator
     def post(self,request):
         try:
             offset = 0
             limit = 5
             data = json.loads(request.body)
-            employee_id = 1 #request.employee
+            employee_id = request.employee.id
             projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
 
             #person = employee_id값, 1은True = 비공개 프로젝트, 0은 False = 공개
@@ -169,8 +169,9 @@ class ProjectListView(View):
         except ValueError as e :
             return JsonResponse({'MESSAGE': f'VALUE_ERROR:{e}'}, status=400)
 
+    @jwt_utils.signin_decorator
     def get(self,request):
-        employee_id = 1 #request.employee
+        employee_id = request.employee.id
         limit = 7
         projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
 
@@ -228,10 +229,10 @@ class ProjectListView(View):
 
         return JsonResponse({'main_list' : project_list}, status=200)
 
-    #@signin_decorator
+    @jwt_utils.signin_decorator
     def delete(self,request,project_id):
         data = json.loads(request.body)
-        employee_id = 1 #request.employee
+        employee_id = request.employee.id
         post = get_object_or_404(Project, pk=project_id)
 
         if post.created_by.id == int(employee_id) :
@@ -241,11 +242,11 @@ class ProjectListView(View):
 
             return JsonResponse({'MESSAGE' : 'DELETE_SUCCESS'}, status=200)
 
-    #@signin_decorator
+    @jwt_utils.signin_decorator
     def patch(self,request,project_id):
         try:
             data = json.loads(request.body)
-            employee_id = 1 #request.employee
+            employee_id = request.employee.id
             post = Project.objects.filter(id = project_id)
             participants = ProjectParticipant.objects.filter(project_id = project_id)
 
@@ -317,9 +318,9 @@ class ProjectListView(View):
 
 
 class LikeView(View):
-    #@signin_decorator
+    @jwt_utils.signin_decorator
     def post(self,request,project_id):
-        employee_id = 1 #request.employee.id
+        employee_id = request.employee.id
         likes = ProjectLike.objects.filter(employee_id = employee_id).select_related('project','employee').all()
 
 #        like_list = [{'id' : like.project.id,
@@ -355,9 +356,9 @@ class LikeView(View):
             return JsonResponse({'like_list': like_list}, status=201)
 
 
-    #@signin_decorator
+    @jwt_utils.signin_decorator
     def get(self,request):
-        employee_id = 1 #request.employee.id
+        employee_id = request.employee.id
 
         if ProjectLike.objects.filter(employee_id = employee_id).exists() :
 #            likes = ProjectLike.objects.filter(employee_id = employee_id)
@@ -383,12 +384,12 @@ class ThreadView(View):
         aws_access_key_id=my_settings.AWS_ACCESS_KEY['MY_AWS_ACCESS_KEY_ID'],
         aws_secret_access_key=my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY']
     )
-    #@signin_decorator
+    @jwt_utils.signin_decorator
     def post(self,request,project_id): 
         #data = request.POST['data']
         #data = eval(request.POST['data'])
         #data = json.loads(request.body)
-        employee_id = 1 #request.employee.id
+        employee_id = request.employee.id
         #content = request.POST.get(['content']) 
 
         if ProjectParticipant.objects.filter(employee_id = employee_id, project_id = project_id).exists():
@@ -533,9 +534,9 @@ class ThreadView(View):
                                  'detail_list' : detail_list4}, status=200)
         return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
 
-
+    @jwt_utils.signin_decorator
     def patch(self,request,project_id,thread_id):
-        employee_id = 1 #request.employee.id
+        employee_id = request.employee.id
         employee_auth = Employee.objects.get(id = employee_id).auth.id
 
         if ProjectParticipant.objects.filter(employee_id = employee_id, project_id = project_id).exists():
@@ -583,12 +584,12 @@ class ThreadView(View):
                 }, status=201)
         return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 400)
 
+    @jwt_utils.signin_decorator
     def patch(self, request, notice_id):
         try:
             data = eval(request.POST['data'])
-            # employee_id   = request.employee.id
+            employee_id   = request.employee.id
             # employee_auth = request.employee.auth
-            employee_id = 2
             employee_auth = Employee.objects.get(id = employee_id).auth.id
 
             target_notice = Notice.objects.filter(id = notice_id).values()[0]
@@ -645,9 +646,10 @@ class ThreadView(View):
             return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
 
 
-    #@jwt_utils.signin_decorator
+    @jwt_utils.signin_decorator
     def delete(self,request,project_id,thread_id):
-        employee_id   = 1 #request.employee.id
+        employee_id   = request.employee.id
+        employee_auth = Employee.objects.get(id = employee_id).auth.id
         #employee_auth = request.employee.auth
 
         thread = ProjectDetail.objects.get(id = thread_id)
@@ -662,9 +664,10 @@ class ThreadView(View):
 
 
 class CommentView(View):
+    @jwt_utils.signin_decorator
     def post(self,request,project_id,thread_id):
         data = json.loads(request.body)
-        employee_id = 1 #request.employee.id
+        employee_id = request.employee.id
 
         if not data['content'] :
             return JsonResponse({'MESSAGE' : 'NEED_CONTENT'}, status=404)
@@ -680,9 +683,11 @@ class CommentView(View):
             return JsonResponse({'MESSAGE' : 'CREATE_SUCCESS'},status=201)
         return JSonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
 
+
+    @jwt_utils.signin_decorator
     def patch(self,request,project_id,thread_id,comment_id):
         data = json.loads(request.body)
-        employee_id = 1 #request.employee.id
+        employee_id = request.employee.id
         comment = ProjectReview.objects.get(id=comment_id)
 
         if comment.writer_id == employee_id :
@@ -693,9 +698,10 @@ class CommentView(View):
             return JsonResponse({'MESSAGE' : 'PATCH_SUCCESS'},status = 200)
         return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
 
+    @jwt_utils.signin_decorator
     def delete(self,request,project_id,thread_id,comment_id):
-        employee_id = 1 #request.employee.id
-        employee_auth = 1 #request.employee.auth
+        employee_id = request.employee.id
+        employee_auth = request.employee.auth
         comment = ProjectReview.objects.get(id=comment_id)
 
         if comment.writer_id != employee_id or employee_auth != 1 :

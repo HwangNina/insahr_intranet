@@ -29,7 +29,7 @@ class NoticeMainView(View):
             
 
 class NoticeListView(View):
-
+    @jwt_utils.signin_decorator
     def get(self, request):
         try:
             limit = 5
@@ -179,7 +179,6 @@ class NoticeDetailView(View):
             data = eval(request.POST['data'])
             employee_id   = request.employee.id
             employee_auth = request.employee.auth
-
             target_notice = Notice.objects.filter(id = notice_id).values()[0]
 
             if target_notice['author_id'] != employee_id and employee_auth != 1:

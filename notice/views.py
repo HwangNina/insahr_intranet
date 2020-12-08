@@ -19,9 +19,10 @@ class NoticeMainView(View):
     def get(self, request):
         recent_three = list(Notice.objects.all().values())[-3:]
 
-        returning_object = [{'title': notice['title'],
-                            'content':notice['content'],
-                            'date':notice['created_at']} for notice in recent_three[::-1]]
+        returning_object = [{'id' : notice['id'],
+                             'title' : notice['title'],
+                             'content' : notice['content'],
+                             'date' : notice['created_at']} for notice in recent_three[::-1]]
 
         return JsonResponse(
             {"returning_notices" : returning_object}, status=200)
@@ -50,16 +51,16 @@ class NoticeListView(View):
                 search_list = queries.get('search')[0].split(' ')
                 for word in search_list:
                     conditions.append(Q(title__icontains = word))
-                notice_list = Notice.objects.filter(reduce(OR, conditions))[::-1]
+                notice_list = Notice.objects.filter(reduce(OR, conditions))
             else:
-                notice_list = Notice.objects.all()[::-1]
+                notice_list = Notice.objects.all()
 
 
             notice_page_list = [{
                 'no': notice.id,
                 'title': notice.title,
                 'date': notice.created_at
-                } for notice in notice_list][offset:offset+limit]
+            } for notice in notice_list][::-1][offset:offset+limit]
 
             return JsonResponse({"notices":notice_page_list,"total_notices":len(notice_list)}, status=200)
 
@@ -164,7 +165,7 @@ class NoticeDetailView(View):
                     "title": target_notice['title'],
                     "created_at":target_notice['created_at'],
                     "content": target_notice['content'],
-                    "attachments":[{'name':f['name'],'code':f['code'],'size':f['size'],'id':f['id']} for f in NoticeAttachment.objects.filter(notice_id = target_notice['id']).values()]
+                    "attachments":[{'name':f['name'],'code':f['code'],'size':f['size'],'id':f['id'],'url':f['url']} for f in NoticeAttachment.objects.filter(notice_id = target_notice['id']).values()]
                 },
                 "previous":returning_previous,
                 "next":returning_next
@@ -244,6 +245,7 @@ class NoticeDetailView(View):
     @jwt_utils.signin_decorator
     def delete(self, request, notice_id):
         employee_id = request.employee.id
+        employee_auth = request.employee.auth.id
         target_notice = Notice.objects.get(id = notice_id)
        
         if target_notice.author.id != employee_id and employee_auth != 1:

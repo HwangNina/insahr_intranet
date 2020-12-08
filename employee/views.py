@@ -63,7 +63,8 @@ class SignUpView(View):
                 employee = Employee.objects.get(id = new_employee.id)
             ).save()
             
-            return JsonResponse({"message": "SIGNUP_SUCCESS"}, status=200)
+            return JsonResponse({"message": "SIGNUP_SUCCESS"}, status=201)
+
         except KeyError as e :
             return JsonResponse({'message': f'KEY_ERROR:{e}'}, status=400)
         except ValueError as e:

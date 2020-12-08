@@ -42,6 +42,7 @@ class ProjectAttachment(models.Model):
     url = models.CharField(max_length = 500)
     name = models.CharField(max_length = 100)
     size = models.IntegerField()
+    code = models.CharField(max_length = 100)
 
     class Meta :
         db_table = 'project_attachments'

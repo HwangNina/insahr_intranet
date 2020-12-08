@@ -72,7 +72,7 @@ class ProjectListView(View):
     def post(self,request):
         try:
             offset = 0
-            limit = 5
+            limit = 7
             data = json.loads(request.body)
             employee_id = request.employee.id
             projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()

@@ -6,7 +6,7 @@ from employee.models import Employee
 
 class EmployeeDetail(models.Model):
     employee         = models.OneToOneField(Employee, on_delete=models.CASCADE)
-    joined_at        = models.DateField(auto_now=False, auto_now_add=False, null=True)
+    joined_at        = models.DateField(auto_now=True)
     probation_period = models.CharField(max_length=50, null=True)
     worked_since     = models.DateField(auto_now=False, auto_now_add=False, null=True)
     total_experience = models.CharField(max_length=50, null=True)

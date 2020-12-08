@@ -12,26 +12,30 @@ class WorkTimeView(View):
     #@jwt_utils.signin_decorator
     def post(self,request):
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body) 
             #employee_id = request.employee.id
 
             if data['start_time'] :
-                Attendance.objects.create(
+                time_create = Attendance.objects.create(
                     employee = Employee.objects.get(id = employee_id),
                     label = AttendanceLabel.objects.get(id = 1),
                     begin_at = data['start_time']
                 )
-                return JsonResponse({'MESSAGE' : 'START_TIME_SAVED'}, status=21)
+                return JsonResponse({'MESSAGE' : 'START_TIME_SAVED',
+                                     'time_id' : time_create.id}, status=201)
 
-            if data['totla_pause'] and data['start_time']:
-                Attendance.objects.create(
-                    total_pause = data['total_pause']
-                )
-
-            if data['finish_at']:
-                Attendance.objects.create(
-                    finish_at = data['finish_time']
-                )
+#            if data['totla_pause'] and data['start_time']:
+#
+#                Attendance.objects.create(
+#                    total_pause = data['total_pause']
+#                )
+#
+#            if data['finish_at']:
+#                Attendance.objects.create(
+#                    finish_at = data['finish_time']
+#                )
+        except KeyError as e :
+            return JsonResponse({'message': f'KEY_ERROR:{e}'}, status=400)
 
 
 class WorkingHourView(View):

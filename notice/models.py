@@ -20,7 +20,10 @@ class Notice(models.Model):
 
 class NoticeAttachment(models.Model):
     notice = models.ForeignKey(Notice, on_delete=models.CASCADE)
-    file = models.CharField(max_length=500)
+    url  = models.CharField(max_length=500)
+    name = models.CharField(max_length=100)
+    size = models.IntegerField()
+    code = models.CharField(max_length=100)
 
     class Meta():
         db_table = 'notice_attachments'

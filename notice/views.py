@@ -165,7 +165,7 @@ class NoticeDetailView(View):
                     "title": target_notice['title'],
                     "created_at":target_notice['created_at'],
                     "content": target_notice['content'],
-                    "attachments":[{'name':f['name'],'code':f['code'],'size':f['size'],'id':f['id']} for f in NoticeAttachment.objects.filter(notice_id = target_notice['id']).values()]
+                    "attachments":[{'name':f['name'],'code':f['code'],'size':f['size'],'id':f['id'],'url':f['url']} for f in NoticeAttachment.objects.filter(notice_id = target_notice['id']).values()]
                 },
                 "previous":returning_previous,
                 "next":returning_next

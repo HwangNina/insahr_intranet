@@ -322,20 +322,36 @@ class LikeView(View):
         employee_id = 1 #request.employee.id
         likes = ProjectLike.objects.filter(employee_id = employee_id).select_related('project','employee').all()
 
-        like_list = [{'id' : like.project.id,
+#        like_list = [{'id' : like.project.id,
+#                      'title' : like.project.title,
+#                      'description' : like.project.description,
+#                      'is_private' : like.project.is_private,
+#                      'start_date' : like.project.start_date,
+#                      'end_date' : like.project.end_date,
+#                      'participants' : len([par.employee_id for par in like.project.projectparticipant_set.all()])} for like in likes]
+
+        if ProjectLike.objects.filter(project_id=project_id, employee_id=employee_id).exists():
+            project = ProjectLike.objects.get(employee_id = employee_id, project_id = project_id)
+            project.delete()
+
+            like_list = [{'id' : like.project.id,
                       'title' : like.project.title,
                       'description' : like.project.description,
                       'is_private' : like.project.is_private,
                       'start_date' : like.project.start_date,
                       'end_date' : like.project.end_date,
                       'participants' : len([par.employee_id for par in like.project.projectparticipant_set.all()])} for like in likes]
-
-        if ProjectLike.objects.filter(project_id=project_id, employee_id=employee_id).exists():
-            project = ProjectLike.objects.get(employee_id = employee_id, project_id = project_id)
-            project.delete()
             return JsonResponse({'like_list': like_list}, status=200)
         else:
             ProjectLike.objects.create(project_id=project_id, employee_id=employee_id)
+
+            like_list = [{'id' : like.project.id,
+                      'title' : like.project.title,
+                      'description' : like.project.description,
+                      'is_private' : like.project.is_private,
+                      'start_date' : like.project.start_date,
+                      'end_date' : like.project.end_date,
+                      'participants' : len([par.employee_id for par in like.project.projectparticipant_set.all()])} for like in likes]
             return JsonResponse({'like_list': like_list}, status=201)
 
 

@@ -22,5 +22,6 @@ urlpatterns = [
     path('project', include('project.urls')),
     path("notice", include("notice.urls")),
     path("schedule", include("schedule.urls")),
-    path("humanresource", include("hr_mgmt.urls"))
+    path("humanresource", include("hr_mgmt.urls")),
+    path('attendance', include('attendance.urls'))
 ]

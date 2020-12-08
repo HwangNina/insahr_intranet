@@ -21,6 +21,17 @@ from hr_mgmt.models import EmployeeDetail
 
 
 # Create your views here.
+class EmployeeMainView(View):
+    @jwt_utils.signin_decorator
+    def get(self,request):
+        employee_id = request.employee.id
+        target_employee = Employee.objects.get(id=employee_id)
+
+        return JsonResponse({
+                            "name" : employee.name_kor, 
+                            "joined_since":relativedelta(datetime.now(), employee.employeedetail.joined_at).days, 
+                            "profile_image":employee.profile_image
+                            }, status=200)
 
 class SignUpView(View):
 

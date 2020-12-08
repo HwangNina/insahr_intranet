@@ -15,7 +15,7 @@ from notice.models   import Notice, NoticeAttachment
 from employee.models import Employee
 
 class NoticeMainView(View):
-
+    @jwt_utils.signin_decorator
     def get(self, request):
         recent_three = list(Notice.objects.all().values())[-3:]
 
@@ -29,7 +29,7 @@ class NoticeMainView(View):
             
 
 class NoticeListView(View):
-
+    @jwt_utils.signin_decorator
     def get(self, request):
         try:
             limit = 5
@@ -74,11 +74,10 @@ class NoticeDetailView(View):
         aws_access_key_id=my_settings.AWS_ACCESS_KEY['MY_AWS_ACCESS_KEY_ID'],
         aws_secret_access_key=my_settings.AWS_ACCESS_KEY['MY_AWS_SECRET_ACCESS_KEY']
     )
-    # @jwt_utils.signin_decorator
+    @jwt_utils.signin_decorator
     def post(self, request):
         try:
-            # employee_id = request.employee.id
-            employee_id = 2
+            employee_id = request.employee.id
 
             attachment_list = []
             if request.FILES.getlist('attachment', None):
@@ -135,6 +134,7 @@ class NoticeDetailView(View):
         except KeyError as e :
             return JsonResponse({'MESSAGE': f'KEY_ERROR:{e}'}, status=400)
 
+    @jwt_utils.signin_decorator
     def get(self, request, notice_id):
         target_notice = dict(Notice.objects.filter(id = notice_id).values()[0])
 
@@ -173,15 +173,12 @@ class NoticeDetailView(View):
             status=200
         )        
 
-    # @jwt_utils.signin_decorator
+    @jwt_utils.signin_decorator
     def patch(self, request, notice_id):
         try:
             data = eval(request.POST['data'])
-            # employee_id   = request.employee.id
-            # employee_auth = request.employee.auth
-            employee_id = 2
-            employee_auth = Employee.objects.get(id = employee_id).auth.id
-
+            employee_id   = request.employee.id
+            employee_auth = request.employee.auth
             target_notice = Notice.objects.filter(id = notice_id).values()[0]
 
             if target_notice['author_id'] != employee_id and employee_auth != 1:

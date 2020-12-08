@@ -319,34 +319,25 @@ class ProjectListView(View):
 class LikeView(View):
     #@signin_decorator
     def post(self,request,project_id):
-        try:
-            data = json.loads(request.body)
-            #post = Project.objects.filter(id = project_id)
+        employee_id = 1 #request.employee.id
+        likes = ProjectLike.objects.filter(employee_id = employee_id).select_related('project','employee').all()
 
-            employee_id = 1 #request.employee.id
+        like_list = [{'id' : like.project.id,
+                      'title' : like.project.title,
+                      'description' : like.project.description,
+                      'is_private' : like.project.is_private,
+                      'start_date' : like.project.start_date,
+                      'end_date' : like.project.end_date,
+                      'participants' : len([par.employee_id for par in like.project.projectparticipant_set.all()])} for like in likes]
 
-            likes = ProjectLike.objects.filter(employee_id = employee_id).select_related('project','employee').all()
+        if ProjectLike.objects.filter(project_id=project_id, employee_id=employee_id).exists():
+            project = ProjectLike.objects.get(employee_id = employee_id, project_id = project_id)
+            project.delete()
+            return JsonResponse({'like_list': like_list}, status=200)
+        else:
+            ProjectLike.objects.create(project_id=project_id, employee_id=employee_id)
+            return JsonResponse({'like_list': like_list}, status=201)
 
-            like_list = [{'id' : like.project.id,
-                          'title' : like.project.title,
-                          'description' : like.project.description,
-                          'is_private' : like.project.is_private,
-                          'start_date' : like.project.start_date,
-                          'end_date' : like.project.end_date,
-                          'participants' : len([par.employee_id for par in like.project.projectparticipant_set.all()])} for like in likes]
-
-
-            if ProjectLike.objects.filter(project_id=project_id, employee_id=employee_id).exists():
-                project = ProjectLike.objects.get(employee_id = employee_id, project_id = project_id)
-                project.delete()
-                return JsonResponse({'like_list': like_list}, status=200)
-
-            else:
-                ProjectLike.objects.create(project_id=project_id, employee_id=employee_id)
-                return JsonResponse({'like_list': like_list}, status=201)
-
-        except json.JSONDecodeError:
-            return JsonResponse({'MESSAGE':'JSON_ERROR'}, status=400)
 
     #@signin_decorator
     def get(self,request):
@@ -366,7 +357,7 @@ class LikeView(View):
                           'end_date' : like.project.end_date,
                           'participants' : len([par.employee_id for par in like.project.projectparticipant_set.all()])} for like in likes]
 
-            return JsonResponse({'like_project_list' : like_list}, status=200)
+            return JsonResponse({'like_list' : like_list}, status=200)
         return JsonResponse({'MESSAGE' :'LIKELIST_DOES_NOT_EXIST'})
 
 
@@ -404,29 +395,9 @@ class ThreadView(View):
                         }
                     )
 
-#                    BUCKET_NAME = 'thisisninasbucket'
-#                    KEY = 'file' 
-#                    client = boto3.client('s3')
-#                    resp = client.head_object(Bucket=BUCKET_NAME, Key=KEY)
-#                    size = resp['ContentLength']
-#
-#                    obj = s3.
-#
-#
-#
-#                    print(file) 
-                    print(filesize) 
-                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}+{file.content_type}"
+                    file_url = f"https://s3.ap-northeast-2.amazonaws.com/thisisninasbucket/{filename}"
                     #file_name = file_name
-                    attachment_list.append(filecode)
-                    attachment_list.append(filename)
-                    attachment_list.append(file_url)
-                    attachment_list.append(filesize)
-                    print(file_url)
-                    print(attachment_list)
-
-            else:
-                file_url = None
+                    attachment_list.append({'filename':filename,'filecode':filecode,'filesize':filesize,'fileurl':file_url})
 
             new_thread = ProjectDetail.objects.create(
                 writer_id = Employee.objects.get(id=employee_id).id,
@@ -437,10 +408,10 @@ class ThreadView(View):
             for file in attachment_list:
                 new_projectattachment = ProjectAttachment.objects.create(
                     project_detail = ProjectDetail.objects.get(id = new_thread.id),
-                    name = filename,
-                    url   = file_url,
-                    size  = filesize,
-                    code  = filecode
+                    name = file['filename'],
+                    url   = file['fileurl'],
+                    size  = file['filesize'],
+                    code  = file['filecode']
                 )
 
             return JsonResponse({
@@ -449,15 +420,14 @@ class ThreadView(View):
                     'writer_id':new_thread.writer_id,
                     'writer_name':Employee.objects.get(id=employee_id).name_kor,
                     'content':new_thread.content,
-                    'created_at':new_thread.created_at.date()
-                },
-                'attachments':{
-                    'id':new_projectattachment.project_detail_id,
-                    'code' : new_projectattachment.code,
-                    'name' : new_projectattachment.name,
-                    'url':new_projectattachment.url,
-                    'size' :new_projectattachment.size}
-            }, status=201)
+                    'created_at':new_thread.created_at.date()},
+                'attachments':[{
+                    'id': attachment.id,
+                    'code' : attachment.code,
+                    'name' : attachment.name,
+                    'url' : attachment.url,
+                    'size' : attachment.size}for attachment in ProjectAttachment.objects.filter(project_detail_id = new_thread.id)]
+                }, status=201)
         return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
 
 

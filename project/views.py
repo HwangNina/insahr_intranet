@@ -30,10 +30,10 @@ from employee.models import (
 import jwt_utils
 
 class MainListView(View):
-    #@jwt_utils.signin_decorator
+    @jwt_utils.signin_decorator
     def get(self,request):
         recent_projects = list(Project.objects.prefetch_related('projectparticipant_set').all())[-4:] 
-        employee_id = 1 #request.employee.id
+        employee_id = request.employee.id
 
         project_list = [{
             'id' : project.id,
@@ -68,13 +68,13 @@ class PeopleView(View):
             return JsonResponse({'MESSAGE' : f"EXCEPT_ERROR:{e}"}, status=400)
 
 class ProjectListView(View):
-    #@jwt_utils.signin_decorator
+    @jwt_utils.signin_decorator
     def post(self,request):
         try:
             offset = 0
             limit = 5
             data = json.loads(request.body)
-            employee_id = 1 #request.employee.id
+            employee_id = request.employee.id
             projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
 
             #person = employee_id값, 1은True = 비공개 프로젝트, 0은 False = 공개
@@ -169,9 +169,9 @@ class ProjectListView(View):
         except ValueError as e :
             return JsonResponse({'MESSAGE': f'VALUE_ERROR:{e}'}, status=400)
 
-    #@jwt_utils.signin_decorator
+    @jwt_utils.signin_decorator
     def get(self,request):
-        employee_id = 1 #request.employee.id
+        employee_id = request.employee.id
         limit = 7
         projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
 
@@ -321,6 +321,7 @@ class LikeView(View):
     @jwt_utils.signin_decorator
     def post(self,request,project_id):
         employee_id = request.employee.id
+        print(employee_id)
         likes = ProjectLike.objects.filter(employee_id = employee_id).select_related('project','employee').all()
 
 #        like_list = [{'id' : like.project.id,

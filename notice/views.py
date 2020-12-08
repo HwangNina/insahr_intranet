@@ -19,10 +19,9 @@ class NoticeMainView(View):
     def get(self, request):
         recent_three = list(Notice.objects.all().values())[-3:]
 
-        returning_object = [{'id' : notice['id'],
-                             'title' : notice['title'],
-                             'content' : notice['content'],
-                             'date' : notice['created_at']} for notice in recent_three[::-1]]
+        returning_object = [{'title': notice['title'],
+                            'content':notice['content'],
+                            'date':notice['created_at']} for notice in recent_three[::-1]]
 
         return JsonResponse(
             {"returning_notices" : returning_object}, status=200)
@@ -60,7 +59,7 @@ class NoticeListView(View):
                 'no': notice.id,
                 'title': notice.title,
                 'date': notice.created_at
-            } for notice in notice_list][::-1][offset:offset+limit]
+                } for notice in notice_list][offset:offset+limit]
 
             return JsonResponse({"notices":notice_page_list,"total_notices":len(notice_list)}, status=200)
 
@@ -228,7 +227,6 @@ class NoticeDetailView(View):
     @jwt_utils.signin_decorator
     def delete(self, request, notice_id):
         employee_id = request.employee.id
-        employee_auth = request.employee.auth.id
         target_notice = Notice.objects.get(id = notice_id)
        
         if target_notice.author.id != employee_id and employee_auth != 1:

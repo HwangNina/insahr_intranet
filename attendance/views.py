@@ -8,7 +8,24 @@ from django.http import JsonResponse
 from employee.models import Auth, Employee
 from attendance.models import AttendanceLabel, Attendance
 
-class 
+class WorkTimeView(View):
+    #@jwt_utils.signin_decorator
+    def post(self,request):
+        try:
+            data = json.loads(request.body)
+            #employee_id = request.employee.id
+
+            if data['start_time'] :
+                Attendance.objects.create(
+                    employee = Employee.objects.get(id = employee_id),
+                    label = AttendanceLabel.objects.get(id = 1),
+                    begin_at = data['start_time']
+                )
+                return JsonResponse({'MESSAGE' : 'START_TIME_SAVED'}, status=21)
+
+            if data['totla_pause'] and data['start_time']:
+                Attendance.objects.create(
+                    total_pause = data['total_pause']
 
 
 class WorkingHourView(View):

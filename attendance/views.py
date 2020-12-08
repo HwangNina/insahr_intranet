@@ -26,8 +26,12 @@ class WorkTimeView(View):
             if data['totla_pause'] and data['start_time']:
                 Attendance.objects.create(
                     total_pause = data['total_pause']
+                )
 
-            if data['finish_at'] :
+            if data['finish_at']:
+                Attendance.objects.create(
+                    finish_at = data['finish_time']
+                )
 
 
 class WorkingHourView(View):

@@ -27,6 +27,8 @@ class WorkTimeView(View):
                 Attendance.objects.create(
                     total_pause = data['total_pause']
 
+            if data['finish_at'] :
+
 
 class WorkingHourView(View):
     # @jwt_utils.signin_decorator

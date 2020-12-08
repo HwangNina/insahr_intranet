@@ -30,10 +30,10 @@ from employee.models import (
 import jwt_utils
 
 class MainListView(View):
-    @jwt_utils.signin_decorator
+    #@jwt_utils.signin_decorator
     def get(self,request):
-        recent_projects = list(Project.objects.all())[-4:] 
-        employee_id = request.employee.id
+        recent_projects = list(Project.objects.prefetch_related('projectparticipant_set').all())[-4:] 
+        employee_id = 1 #request.employee.id
 
         project_list = [{
             'id' : project.id,
@@ -42,7 +42,7 @@ class MainListView(View):
             'start_date' : project.start_date.date(),
             'end_date' : project.end_date.date(),
             'is_private' : project.is_private,
-            'participants': len([par.employee for par in project.projectparticipant_set.all()])
+            'participants': len([par.employee for par in project.projectparticipant_set.filter(project_id = project.id)])
         } for project in recent_projects]
 
         if ProjectLike.objects.filter(employee_id = employee_id).exists() :
@@ -68,13 +68,13 @@ class PeopleView(View):
             return JsonResponse({'MESSAGE' : f"EXCEPT_ERROR:{e}"}, status=400)
 
 class ProjectListView(View):
-    @jwt_utils.signin_decorator
+    #@jwt_utils.signin_decorator
     def post(self,request):
         try:
             offset = 0
             limit = 5
             data = json.loads(request.body)
-            employee_id = request.employee.id
+            employee_id = 1 #request.employee.id
             projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
 
             #person = employee_id값, 1은True = 비공개 프로젝트, 0은 False = 공개
@@ -169,9 +169,9 @@ class ProjectListView(View):
         except ValueError as e :
             return JsonResponse({'MESSAGE': f'VALUE_ERROR:{e}'}, status=400)
 
-    @jwt_utils.signin_decorator
+    #@jwt_utils.signin_decorator
     def get(self,request):
-        employee_id = request.employee.id
+        employee_id = 1 #request.employee.id
         limit = 7
         projects = Project.objects.prefetch_related("projectparticipant_set__employee").all()
 
@@ -447,13 +447,13 @@ class ThreadView(View):
                 }, status=201)
         return JsonResponse({'MESSAGE' : 'ACCESS_DENIED'}, status = 403)
 
-
+    #@jwt_utils.signin_decorator
     def get(self,request,project_id):
         employee_id = 1 #request.employee.id
 
         if ProjectParticipant.objects.filter(employee_id = employee_id, project_id = project_id).exists():
 
-            project_details = ProjectDetail.objects.filter(project_detail_id = project_id).all().prefetch_related('projectattachment_set','projectreview_set')
+            project_details = ProjectDetail.objects.filter(project_detail_id = project_id).select_related('writer').prefetch_related('projectattachment_set','projectreview_set').all()
 
 
             #project_details = ProjectDetail.objects.filter(project_detail_id = project_id).all().prefetch_related('projectattachment_set','projectreview_set')
